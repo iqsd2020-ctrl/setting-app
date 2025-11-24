@@ -48,7 +48,7 @@
         .modal-content { background: #1e293b; width: 95%; max-width: 650px; border-radius: 1rem; padding: 1.5rem; border: 1px solid #475569; transform: scale(0.95) translateY(10px); transition: 0.3s; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
         .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
 
-        /* Items List (Updated for Review Mode default) */
+        /* Items List */
         .admin-item { 
             background: rgba(30, 41, 59, 0.8); 
             border: 1px solid rgba(255,255,255,0.05); 
@@ -59,7 +59,7 @@
             flex-direction: column; 
             align-items: flex-start; 
             gap: 0.75rem;
-            transition: all 0.2s; 
+            transition: all 0.3s ease-in-out; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
         .admin-item:hover { transform: translateY(-2px); box-shadow: 0 8px 10px rgba(0,0,0,0.3); }
@@ -75,6 +75,9 @@
         /* Animations */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .fade-out-remove { animation: fadeOutRemove 0.3s ease-in forwards; }
+        @keyframes fadeOutRemove { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); margin-bottom: -100px; } }
     </style>
 </head>
 <body class="flex items-center justify-center text-right selection:bg-amber-500 selection:text-white">
@@ -103,7 +106,7 @@
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-700"></div>
             <div class="p-4 md:p-8 text-center border-b border-slate-700 bg-slate-900/30">
                 <h2 class="text-amber-500 font-bold text-lg md:text-2xl font-[Reem_Kufi] drop-shadow-md">المنصة الإدارية</h2>
-                <div class="mt-1 md:mt-2 text-[8px] md:text-[10px] text-slate-500 uppercase tracking-widest">Admin Control Panel v7.5</div>
+                <div class="mt-1 md:mt-2 text-[8px] md:text-[10px] text-slate-500 uppercase tracking-widest">Admin Control Panel v8.5</div>
             </div>
             <nav class="flex-1 overflow-y-auto py-4 md:py-6 space-y-1">
                 <div class="nav-item active" data-tab="view-dashboard"><span class="material-symbols-rounded text-xl">analytics</span> <span class="hidden md:inline">نظرة عامة</span></div>
@@ -465,8 +468,12 @@
                     <div><label class="text-[10px] text-slate-400 block">الموضوع</label><select id="edit-q-topic" class="input-box text-xs py-2"></select></div>
                     <div><label class="text-[10px] text-slate-400 block">الصعوبة</label><select id="edit-q-diff" class="input-box text-xs py-2"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select></div>
                 </div>
-                <div class="pt-2">
-                    <button id="btn-save-edit-q" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center">
+                
+                <div class="pt-2 flex flex-col md:flex-row gap-3">
+                     <button id="btn-modal-toggle-review" class="flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300">
+                        <span>حالة المراجعة</span>
+                    </button>
+                    <button id="btn-save-edit-q" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center">
                         حفظ التعديلات <span class="material-symbols-rounded text-sm">save</span>
                     </button>
                 </div>
@@ -962,6 +969,7 @@
 
             listToRender.forEach(d => {
                 const div = document.createElement('div');
+                div.id = `q-row-${d.id}`; // مهم جداً للتحكم بالحذف الديناميكي
                 
                 // ** التمييز اللوني **
                 const isReviewed = d.isReviewed === true;
@@ -992,7 +1000,7 @@
                 });
                 optionsHTML += '</div>';
 
-                // أيقونة الحالة (صح أو ساعة رملية)
+                // أيقونة الحالة
                 const statusIcon = isReviewed 
                     ? '<span class="flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30"><span class="material-symbols-rounded text-sm">verified</span> تمت المراجعة</span>'
                     : '<span class="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30"><span class="material-symbols-rounded text-sm">hourglass_empty</span> بانتظار المراجعة</span>';
@@ -1009,7 +1017,7 @@
                             </div>
                         </div>
                         
-                        <div class="mb-2">${statusIcon}</div>
+                        <div class="mb-2 status-indicator">${statusIcon}</div>
 
                         ${optionsHTML}
                         
@@ -1038,9 +1046,9 @@
                 div.querySelector('.btn-edit-q').onclick = () => openEditQModal(d.id, d);
                 
                 div.querySelector('.btn-toggle-review').onclick = async () => {
-                     await toggleReviewStatus(d.id, d.isReviewed);
-                     d.isReviewed = !d.isReviewed;
-                     loadQuestions(false);
+                     // عند الضغط على الزر في القائمة
+                     await handleReviewAction(d.id, d.isReviewed, false);
+                     d.isReviewed = !d.isReviewed; // تحديث المتغير المحلي
                 };
 
                 div.querySelector('.btn-del-q').onclick = async () => { 
@@ -1057,17 +1065,77 @@
             });
         }
         
-        // --- تحديث: دالة مساعدة جديدة لتغيير الحالة ---
-        async function toggleReviewStatus(docId, currentStatus) {
+        // --- تحديث: دالة ذكية للتعامل مع المراجعة وحذف الصف إذا لزم الأمر ---
+        async function handleReviewAction(docId, currentStatus, isModal = false) {
+            const newStatus = !currentStatus;
+            
             try {
-                const newStatus = !currentStatus; // عكس الحالة
-                await updateDoc(doc(db, "questions", docId), {
-                    isReviewed: newStatus
-                });
+                // 1. تحديث قاعدة البيانات
+                await updateDoc(doc(db, "questions", docId), { isReviewed: newStatus });
+                
+                // 2. التعامل مع واجهة المستخدم (DOM)
+                const currentFilter = el('manage-filter').value;
+                const rowElement = document.getElementById(`q-row-${docId}`);
+                
+                // إذا كنا في فلتر "غير المراجعة" وتم اعتماد السؤال (تحول إلى مراجع) -> احذفه من القائمة
+                if (currentFilter === 'unreviewed' && newStatus === true) {
+                    if (rowElement) {
+                        rowElement.classList.add('fade-out-remove');
+                        setTimeout(() => {
+                            rowElement.remove();
+                            // تحديث العداد
+                            const count = document.querySelectorAll('#questions-grid .admin-item').length;
+                            el('qs-counter').innerText = count;
+                            // إذا فرغت القائمة
+                            if(count === 0) el('questions-grid').innerHTML = '<div class="text-center py-8 text-slate-500 border border-dashed border-slate-700 rounded">لا توجد أسئلة غير مراجعة حالياً.</div>';
+                        }, 300);
+                    }
+                    
+                    if(isModal) {
+                        el('question-edit-modal').classList.remove('active'); // إغلاق المودال تلقائياً
+                    }
+                    
+                    toast("تم الاعتماد واختفى من القائمة", "check_circle");
+                    return; // انتهى العمل هنا
+                }
+                
+                // إذا لم نكن في وضع الحذف التلقائي
+                if (!isModal) { 
+                    if(rowElement) {
+                        const btn = rowElement.querySelector('.btn-toggle-review');
+                        const statusInd = rowElement.querySelector('.status-indicator');
+                        
+                        if (newStatus) {
+                            rowElement.classList.remove('bg-amber-900/10', 'border-amber-500/50', 'border-dashed');
+                            rowElement.classList.add('bg-slate-800/40', 'border-slate-700/50');
+                            btn.classList.remove('text-green-400'); btn.classList.add('text-slate-400');
+                            btn.innerHTML = '<span class="material-symbols-rounded text-sm">unpublished</span> إلغاء الاعتماد';
+                            statusInd.innerHTML = '<span class="flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30"><span class="material-symbols-rounded text-sm">verified</span> تمت المراجعة</span>';
+                        } else {
+                            rowElement.classList.add('bg-amber-900/10', 'border-amber-500/50', 'border-dashed');
+                            rowElement.classList.remove('bg-slate-800/40', 'border-slate-700/50');
+                            btn.classList.add('text-green-400'); btn.classList.remove('text-slate-400');
+                            btn.innerHTML = '<span class="material-symbols-rounded text-sm">check_circle</span> اعتماد السؤال';
+                            statusInd.innerHTML = '<span class="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30"><span class="material-symbols-rounded text-sm">hourglass_empty</span> بانتظار المراجعة</span>';
+                        }
+                    }
+                } else {
+                    // إذا كنا داخل المودال ولم نحذف الصف (لأننا لسنا في فلتر غير المراجعة)، نحدث الزر الخلفي
+                    if(rowElement) {
+                        const btnBack = rowElement.querySelector('.btn-toggle-review');
+                        if(btnBack) btnBack.click(); // محاكاة ضغطة الزر الخلفي
+                    }
+                }
+                
                 toast(newStatus ? "تم اعتماد السؤال" : "تم إلغاء الاعتماد", "check_circle");
+                
+                if(isModal) {
+                    updateModalReviewBtn(newStatus);
+                }
+
             } catch (e) {
                 console.error(e);
-                toast("خطأ في تحديث الحالة", "error");
+                toast("خطأ في العملية", "error");
             }
         }
         
@@ -1139,9 +1207,12 @@
         }
 
         let currentEditQId = null;
+        let currentEditQStatus = false; // تتبع حالة السؤال الحالي في المودال
 
         window.openEditQModal = (docId, data) => {
             currentEditQId = docId;
+            currentEditQStatus = data.isReviewed || false;
+            
             el('edit-q-text').value = data.question;
             el('edit-o1').value = data.options[0]; el('edit-o2').value = data.options[1]; el('edit-o3').value = data.options[2]; el('edit-o4').value = data.options[3];
             el('edit-q-exp').value = data.explanation || ""; el('edit-q-diff').value = data.difficulty || "متوسط";
@@ -1156,7 +1227,29 @@
                 el('edit-q-topic').value = data.topic; 
             }
             
+            // تحديث زر المودال
+            updateModalReviewBtn(currentEditQStatus);
+            
             el('question-edit-modal').classList.add('active');
+        };
+
+        // دالة تحديث شكل زر المودال
+        function updateModalReviewBtn(status) {
+            const btn = el('btn-modal-toggle-review');
+            if(status) {
+                btn.className = "flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-green-500/30 bg-green-900/20 hover:bg-green-900/30 text-green-400";
+                btn.innerHTML = '<span class="material-symbols-rounded">verified</span> معتمد (إلغاء)';
+            } else {
+                btn.className = "flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-amber-500/30 bg-amber-900/20 hover:bg-amber-900/30 text-amber-500";
+                btn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> غير معتمد (اعتماد)';
+            }
+        }
+
+        // حدث زر المراجعة داخل المودال
+        el('btn-modal-toggle-review').onclick = async () => {
+             if(!currentEditQId) return;
+             await handleReviewAction(currentEditQId, currentEditQStatus, true);
+             currentEditQStatus = !currentEditQStatus; // تحديث الحالة المحلية للمودال
         };
 
         el('btn-save-edit-q').onclick = async () => {
@@ -1172,10 +1265,16 @@
                     question: q, options: [o1,o2,o3,o4], correctAnswer: correctIndex, 
                     explanation: el('edit-q-exp').value, topic: topic, difficulty: el('edit-q-diff').value 
                 });
-                toast("تم تعديل السؤال"); el('question-edit-modal').classList.remove('active'); loadQuestions(false);
-                isCacheLoaded = false; 
+                toast("تم تعديل السؤال"); el('question-edit-modal').classList.remove('active'); 
+                // تحديث القائمة الخلفية
+                const row = document.getElementById(`q-row-${currentEditQId}`);
+                if(row) {
+                    // تحديث النص يدوياً لعدم إعادة التحميل الكامل
+                    const txtDiv = row.querySelector('.text-base');
+                    if(txtDiv) txtDiv.innerHTML = `<span class="text-amber-500 ml-1">س:</span> ${highlightText(q, currentSearchTerm)}`;
+                }
             } catch(e) { alert("Error: " + e.message); }
-            btn.innerText = "حفظ التعديلات";
+            btn.innerHTML = 'حفظ التعديلات <span class="material-symbols-rounded text-sm">save</span>';
         };
         document.querySelector('.close-q-modal').onclick = () => el('question-edit-modal').classList.remove('active');
 

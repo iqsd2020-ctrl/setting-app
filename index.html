@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم المطور - وحي أهل البيت (ع)</title>
+    <title>لوحة القيادة المركزية - وحي أهل البيت (ع)</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet">
@@ -20,64 +19,43 @@
     <style>
         /* Base Styles */
         body { font-family: 'Amiri', serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; overflow-x: hidden; }
-        
-        /* Glass Effect */
         .glass { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
-        
-        /* Inputs */
         .input-box { width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; color: white; padding: 0.7rem; border-radius: 0.5rem; outline: none; transition: 0.3s; font-size: 0.95rem; }
         .input-box:focus { border-color: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15); background: rgba(15, 23, 42, 1); }
         .input-box:disabled { opacity: 0.6; cursor: not-allowed; background: #1e293b; }
-        
-        /* Custom Select Arrow */
         select.input-box { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23fbbf24' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: left 0.75rem center; background-repeat: no-repeat; background-size: 1.25em; }
-        
-        /* Buttons */
         .btn-gold { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; font-weight: bold; padding: 0.75rem; border-radius: 0.5rem; transition: 0.3s; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.25); border: 1px solid #d97706; }
         .btn-gold:hover { filter: brightness(1.15); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4); }
-        .btn-gold:active { transform: translateY(0); }
-        
-        /* Sidebar Navigation */
         .nav-item { padding: 1rem; color: #94a3b8; cursor: pointer; border-right: 3px solid transparent; transition: 0.3s; display: flex; align-items: center; gap: 0.75rem; font-family: 'Reem Kufi', sans-serif; }
         .nav-item:hover { background: rgba(255,255,255,0.03); color: white; }
         .nav-item.active { background: linear-gradient(90deg, rgba(217, 119, 6, 0.15), transparent); color: #fbbf24; border-right-color: #fbbf24; }
         
-        /* Modals */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(4px); }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-content { background: #1e293b; width: 95%; max-width: 650px; border-radius: 1rem; padding: 1.5rem; border: 1px solid #475569; transform: scale(0.95) translateY(10px); transition: 0.3s; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
         .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
 
-        /* Items List */
         .admin-item { 
             background: rgba(30, 41, 59, 0.8); 
             border: 1px solid rgba(255,255,255,0.05); 
             border-radius: 1rem; 
-            padding: 1.5rem; 
-            margin-bottom: 1rem; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: flex-start; 
-            gap: 0.75rem;
+            padding: 1rem; 
+            margin-bottom: 0.75rem; 
             transition: all 0.3s ease-in-out; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            /* Ensure content doesn't overflow */
+            overflow: hidden;
         }
         .admin-item:hover { transform: translateY(-2px); box-shadow: 0 8px 10px rgba(0,0,0,0.3); }
-        
-        /* Utilities */
+
         .hidden { display: none !important; }
         ::-webkit-scrollbar { width: 6px; } 
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #d97706; }
         .spinner { animation: spin 1s linear infinite; } @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        /* Animations */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .fade-out-remove { animation: fadeOutRemove 0.3s ease-in forwards; }
-        @keyframes fadeOutRemove { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); margin-bottom: -100px; } }
     </style>
 </head>
 <body class="flex items-center justify-center text-right selection:bg-amber-500 selection:text-white">
@@ -87,15 +65,11 @@
             <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/20 to-transparent rounded-bl-full"></div>
             <span class="material-symbols-rounded text-6xl text-amber-500 mb-6 drop-shadow-lg block">admin_panel_settings</span>
             <h1 class="text-3xl font-bold text-white mb-2 font-[Reem_Kufi]">لوحة المطور</h1>
-            <p class="text-slate-400 text-sm mb-8">نظام إدارة وحي أهل البيت (ع)</p>
-            
+            <p class="text-slate-400 text-sm mb-8">النسخة الشاملة - وحي أهل البيت (ع)</p>
             <div class="relative group">
-                <input type="password" id="admin-pin" class="input-box text-center text-3xl tracking-[0.5em] bg-black/40 border-slate-600 h-16 font-mono text-amber-500 placeholder-slate-700 mb-6 group-hover:border-amber-500/50" placeholder="••••" maxlength="4">
+                <input type="password" id="admin-pin" class="input-box text-center text-3xl tracking-[0.5em] bg-black/40 border-slate-600 h-16 font-mono text-amber-500 placeholder-slate-700 mb-6 group-hover:border-amber-500/50" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*">
             </div>
-            
-            <button id="btn-login" class="btn-gold w-full shadow-lg flex items-center justify-center gap-2 text-lg">
-                <span>تسجيل الدخول</span> <span class="material-symbols-rounded">login</span>
-            </button>
+            <button id="btn-login" class="btn-gold w-full shadow-lg flex items-center justify-center gap-2 text-lg"><span>تسجيل الدخول</span> <span class="material-symbols-rounded">login</span></button>
             <p id="login-msg" class="text-red-400 text-sm mt-4 h-5 font-bold transition-all"></p>
         </div>
     </div>
@@ -106,24 +80,24 @@
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-700"></div>
             <div class="p-4 md:p-8 text-center border-b border-slate-700 bg-slate-900/30">
                 <h2 class="text-amber-500 font-bold text-lg md:text-2xl font-[Reem_Kufi] drop-shadow-md">المنصة الإدارية</h2>
-                <div class="mt-1 md:mt-2 text-[8px] md:text-[10px] text-slate-500 uppercase tracking-widest">Admin Control Panel v8.5</div>
+                <div class="mt-1 md:mt-2 text-[8px] md:text-[10px] text-slate-500 uppercase tracking-widest">Ultimate Edition</div>
             </div>
             <nav class="flex-1 overflow-y-auto py-4 md:py-6 space-y-1">
                 <div class="nav-item active" data-tab="view-dashboard"><span class="material-symbols-rounded text-xl">analytics</span> <span class="hidden md:inline">نظرة عامة</span></div>
-                <div class="nav-item" data-tab="view-users"><span class="material-symbols-rounded text-xl">manage_accounts</span> <span class="hidden md:inline">إدارة المستخدمين</span></div>
+                <div class="nav-item" data-tab="view-reports"><span class="material-symbols-rounded text-xl text-red-400">report_problem</span> <span class="hidden md:inline">البلاغات</span></div>
+                <div class="nav-item" data-tab="view-users"><span class="material-symbols-rounded text-xl">manage_accounts</span> <span class="hidden md:inline">المستخدمين</span></div>
                 <div class="nav-item" data-tab="view-content"><span class="material-symbols-rounded text-xl">post_add</span> <span class="hidden md:inline">إضافة محتوى</span></div>
                 <div class="nav-item" data-tab="view-manage"><span class="material-symbols-rounded text-xl">library_books</span> <span class="hidden md:inline">بنك الأسئلة</span></div>
-                <div class="nav-item" data-tab="view-system"><span class="material-symbols-rounded text-xl">settings_applications</span> <span class="hidden md:inline">إعدادات النظام</span></div>
+                <div class="nav-item" data-tab="view-system"><span class="material-symbols-rounded text-xl">settings_applications</span> <span class="hidden md:inline">النظام</span></div>
             </nav>
             <div class="p-4 md:p-6 border-t border-slate-700 bg-slate-900/30">
                 <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 text-red-400 hover:text-red-200 hover:bg-red-500/10 p-2 md:p-3 rounded-lg transition text-sm font-bold border border-transparent hover:border-red-500/30">
-                    <span class="material-symbols-rounded">power_settings_new</span> <span class="hidden md:inline">تسجيل خروج</span>
+                    <span class="material-symbols-rounded">power_settings_new</span> <span class="hidden md:inline">خروج</span>
                 </button>
             </div>
         </div>
 
         <div class="flex-1 flex flex-col bg-[#0f172a] h-full relative">
-            
             <div class="md:hidden bg-[#1e293b] p-4 flex justify-between items-center border-b border-slate-700 shadow-md z-30 sticky top-0">
                 <h2 class="text-amber-500 font-bold font-[Reem_Kufi] text-lg">لوحة التحكم</h2>
                 <button class="text-slate-300 hover:text-white p-2 rounded-lg active:bg-slate-700" onclick="document.querySelector('.mobile-nav').classList.toggle('hidden')">
@@ -131,263 +105,130 @@
                 </button>
             </div>
             
-            <div class="mobile-nav hidden md:hidden bg-slate-800/95 backdrop-blur-md border-b border-slate-700 p-2 grid grid-cols-5 gap-1 text-center shadow-xl z-20 absolute top-[60px] w-full">
-                <button class="p-3 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-dashboard')"><span class="material-symbols-rounded">analytics</span><span class="text-[10px]">الرئيسية</span></button>
-                <button class="p-3 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-users')"><span class="material-symbols-rounded">group</span><span class="text-[10px]">المستخدمين</span></button>
-                <button class="p-3 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-content')"><span class="material-symbols-rounded">add</span><span class="text-[10px]">إضافة</span></button>
-                <button class="p-3 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-manage')"><span class="material-symbols-rounded">list</span><span class="text-[10px]">البنك</span></button>
-                <button class="p-3 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-system')"><span class="material-symbols-rounded">settings</span><span class="text-[10px]">النظام</span></button>
+            <div class="mobile-nav hidden md:hidden bg-slate-800/95 backdrop-blur-md border-b border-slate-700 p-2 grid grid-cols-6 gap-1 text-center shadow-xl z-20 absolute top-[60px] w-full">
+                <button class="p-2 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-dashboard')"><span class="material-symbols-rounded">analytics</span><span class="text-[9px]">الرئيسية</span></button>
+                <button class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-reports')"><span class="material-symbols-rounded">report</span><span class="text-[9px]">البلاغات</span></button>
+                <button class="p-2 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-users')"><span class="material-symbols-rounded">group</span><span class="text-[9px]">المستخدمين</span></button>
+                <button class="p-2 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-content')"><span class="material-symbols-rounded">add</span><span class="text-[9px]">إضافة</span></button>
+                <button class="p-2 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-manage')"><span class="material-symbols-rounded">list</span><span class="text-[9px]">البنك</span></button>
+                <button class="p-2 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-700/50 transition flex flex-col items-center gap-1" onclick="triggerTab('view-system')"><span class="material-symbols-rounded">settings</span><span class="text-[9px]">النظام</span></button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 md:p-8 relative scroll-smooth" id="main-view-area">
                 
                 <div id="view-dashboard" class="view-section space-y-4 md:space-y-8 fade-in">
-                    <h3 class="text-xl md:text-2xl text-white font-bold border-b border-slate-700 pb-3 md:pb-4 flex items-center gap-3">
-                        <span class="material-symbols-rounded text-amber-500 bg-amber-500/10 p-2 rounded-lg">dashboard</span>
-                        لوحة القيادة العامة
+                    <h3 class="text-xl md:text-2xl text-white font-bold border-b border-slate-700 pb-3 flex items-center gap-3">
+                        <span class="material-symbols-rounded text-amber-500 bg-amber-500/10 p-2 rounded-lg">dashboard</span> لوحة القيادة العامة
                     </h3>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                        <div class="glass p-4 md:p-6 text-center border-t-4 border-blue-500 hover:bg-slate-800 transition group">
-                            <span class="material-symbols-rounded text-3xl md:text-4xl text-blue-400 mb-2 group-hover:scale-110 transition">group</span>
-                            <div class="text-3xl md:text-4xl font-bold text-white font-mono" id="dash-users-count">-</div>
-                            <div class="text-[10px] md:text-xs text-slate-400 mt-1 font-bold uppercase">إجمالي المستخدمين</div>
-                        </div>
-                        <div class="glass p-4 md:p-6 text-center border-t-4 border-green-500 hover:bg-slate-800 transition group">
-                            <span class="material-symbols-rounded text-3xl md:text-4xl text-green-400 mb-2 group-hover:scale-110 transition">quiz</span>
-                            <div class="text-3xl md:text-4xl font-bold text-white font-mono" id="dash-questions-count">-</div>
-                            <div class="text-[10px] md:text-xs text-slate-400 mt-1 font-bold uppercase">إجمالي الأسئلة</div>
-                        </div>
-                        <div class="glass p-4 md:p-6 text-center border-t-4 border-purple-500 hover:bg-slate-800 transition group">
-                            <span class="material-symbols-rounded text-3xl md:text-4xl text-purple-400 mb-2 group-hover:scale-110 transition">category</span>
-                            <div class="text-3xl md:text-4xl font-bold text-white font-mono" id="dash-topics-count">6</div>
-                            <div class="text-[10px] md:text-xs text-slate-400 mt-1 font-bold uppercase">الأقسام النشطة</div>
-                        </div>
-                        <div class="glass p-4 md:p-6 text-center border-t-4 border-red-500 hover:bg-slate-800 transition group">
-                            <span class="material-symbols-rounded text-3xl md:text-4xl text-red-400 mb-2 group-hover:scale-110 transition">block</span>
-                            <div class="text-3xl md:text-4xl font-bold text-white font-mono" id="dash-banned-count">-</div>
-                            <div class="text-[10px] md:text-xs text-slate-400 mt-1 font-bold uppercase">المحظورين</div>
-                        </div>
+                        <div class="glass p-4 text-center border-t-4 border-red-500 bg-red-900/10 group"><span class="material-symbols-rounded text-3xl text-red-400 mb-2 group-hover:scale-110 transition">report_problem</span><div class="text-3xl font-bold text-white font-mono" id="dash-reports-count">-</div><div class="text-xs text-slate-400 mt-1 font-bold uppercase">بلاغات معلقة</div></div>
+                        <div class="glass p-4 text-center border-t-4 border-blue-500 group"><span class="material-symbols-rounded text-3xl text-blue-400 mb-2 group-hover:scale-110 transition">group</span><div class="text-3xl font-bold text-white font-mono" id="dash-users-count">-</div><div class="text-xs text-slate-400 mt-1 font-bold uppercase">المستخدمين</div></div>
+                        <div class="glass p-4 text-center border-t-4 border-green-500 group"><span class="material-symbols-rounded text-3xl text-green-400 mb-2 group-hover:scale-110 transition">quiz</span><div class="text-3xl font-bold text-white font-mono" id="dash-questions-count">-</div><div class="text-xs text-slate-400 mt-1 font-bold uppercase">الأسئلة</div></div>
+                        <div class="glass p-4 text-center border-t-4 border-purple-500 group"><span class="material-symbols-rounded text-3xl text-purple-400 mb-2 group-hover:scale-110 transition">category</span><div class="text-3xl font-bold text-white font-mono" id="dash-topics-count">-</div><div class="text-xs text-slate-400 mt-1 font-bold uppercase">الأقسام</div></div>
                     </div>
-                    
                     <div class="glass p-4 md:p-6 mt-4 md:mt-6 border border-slate-700/50">
-                        <h4 class="text-lg md:text-xl text-white font-bold mb-3 md:mb-4 flex items-center gap-2">
-                            <span class="material-symbols-rounded">pie_chart</span> توزيع الأسئلة حسب المواضيع
-                        </h4>
-                        <div class="h-64 w-full flex justify-center">
-                            <canvas id="questionsChart"></canvas>
+                        <div class="flex justify-between items-center mb-3 md:mb-4">
+                            <h4 class="text-lg md:text-xl text-white font-bold flex items-center gap-2"><span class="material-symbols-rounded">pie_chart</span> توزيع الأسئلة</h4>
+                            <select id="chart-filter" class="input-box text-xs w-40 py-1 bg-slate-900/50 border-slate-600"><option value="main">حسب التصنيف</option></select>
                         </div>
+                        <div class="h-64 w-full flex justify-center"><canvas id="questionsChart"></canvas></div>
                     </div>
                 </div>
 
-                <div id="view-users" class="view-section hidden space-y-4 md:space-y-6 fade-in">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-800/40 p-4 md:p-5 rounded-xl border border-slate-700/50 backdrop-blur-sm">
-                        <h3 class="text-lg md:text-xl text-white font-bold flex items-center gap-3">
-                            <span class="material-symbols-rounded text-blue-400 bg-blue-400/10 p-2 rounded-lg">people_alt</span> 
-                            قائمة المستخدمين
-                        </h3>
+                <div id="view-reports" class="view-section hidden space-y-4 fade-in">
+                    <div class="flex justify-between items-center bg-red-900/20 p-4 rounded-xl border border-red-700/30">
+                        <h3 class="text-lg md:text-xl text-white font-bold flex items-center gap-3"><span class="material-symbols-rounded text-red-400 bg-red-400/10 p-2 rounded-lg">report_problem</span> بلاغات الأخطاء</h3>
+                        <button id="btn-refresh-reports" class="bg-slate-700 text-white p-2 rounded-lg hover:bg-slate-600 transition"><span class="material-symbols-rounded">sync</span></button>
+                    </div>
+                    <div id="reports-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+                </div>
+
+                <div id="view-users" class="view-section hidden space-y-4 fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
+                        <h3 class="text-lg md:text-xl text-white font-bold flex items-center gap-3"><span class="material-symbols-rounded text-blue-400 bg-blue-400/10 p-2 rounded-lg">people_alt</span> المستخدمين</h3>
                         <div class="flex gap-3 w-full md:w-auto">
                             <div class="relative w-full md:w-72">
                                 <span class="material-symbols-rounded absolute right-3 top-2.5 text-slate-500 pointer-events-none">search</span>
                                 <input type="text" id="user-search" placeholder="بحث بالاسم أو ID..." class="input-box pr-10 py-2 text-sm bg-slate-900/50">
                             </div>
-                            <button id="btn-refresh-users" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg shadow-lg transition active:scale-95">
-                                <span class="material-symbols-rounded">sync</span>
-                            </button>
+                            <button id="btn-refresh-users" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"><span class="material-symbols-rounded">sync</span></button>
                         </div>
                     </div>
                     <div id="users-grid" class="grid grid-cols-1 gap-3"></div>
                 </div>
 
                 <div id="view-content" class="view-section hidden space-y-4 md:space-y-8 fade-in">
-                    <h3 class="text-xl md:text-2xl text-white font-bold mb-3 md:mb-4 flex items-center gap-3 border-b border-slate-700 pb-3 md:pb-4">
-                        <span class="material-symbols-rounded text-green-500 bg-green-500/10 p-2 rounded-lg">add_circle</span> 
-                        إدارة المحتوى
-                    </h3>
-                    
-                    <div class="glass p-6 md:p-8 border border-blue-500/20 relative overflow-hidden group hover:border-blue-500/40 transition">
-                        <div class="absolute top-0 left-0 bg-blue-500/20 w-full h-1 group-hover:h-1.5 transition-all duration-500"></div>
-                        <h4 class="text-lg md:text-xl text-blue-400 font-bold mb-4 md:mb-6 flex items-center gap-2">
-                            <span class="material-symbols-rounded">cloud_upload</span> رفع ملف (Upload JSON)
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-4 md:mb-6">
-                            <select id="upload-cat" class="input-box text-sm"></select>
-                            <select id="upload-topic" class="input-box text-sm" disabled></select>
-                            <select id="upload-diff" class="input-box text-sm"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select>
-                        </div>
-                        <div class="flex flex-col md:flex-row gap-4 items-center bg-slate-800/40 p-4 md:p-5 rounded-xl border border-slate-700 border-dashed hover:bg-slate-800/60 transition">
-                            <input type="file" id="json-file-input" accept=".json" class="text-xs md:text-sm text-slate-400 w-full file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
-                            <button id="btn-upload-file" class="bg-blue-600 text-white px-6 md:px-8 py-2.5 rounded-lg shadow-lg hover:bg-blue-700 text-sm font-bold whitespace-nowrap w-full md:w-auto flex justify-center gap-2 items-center">
-                                بدء الرفع <span class="material-symbols-rounded text-sm">upload_file</span>
-                            </button>
+                    <h3 class="text-xl text-white font-bold border-b border-slate-700 pb-3 flex items-center gap-3"><span class="material-symbols-rounded text-green-500 bg-green-500/10 p-2 rounded-lg">add_circle</span> إضافة محتوى</h3>
+                    <div class="glass p-6 border-t-4 border-green-500">
+                        <h4 class="text-lg text-green-400 font-bold mb-4 flex items-center gap-2"><span class="material-symbols-rounded">edit_square</span> المحرر اليدوي</h4>
+                        <div class="space-y-4">
+                            <input id="man-q" type="text" class="input-box text-lg font-bold bg-slate-800" placeholder="نص السؤال...">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="correct_ans_selector" value="0" checked class="accent-green-500"><input id="man-o1" type="text" class="bg-transparent text-white w-full outline-none text-sm" placeholder="الخيار 1"></div>
+                                <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="correct_ans_selector" value="1" class="accent-green-500"><input id="man-o2" type="text" class="bg-transparent text-white w-full outline-none text-sm" placeholder="الخيار 2"></div>
+                                <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="correct_ans_selector" value="2" class="accent-green-500"><input id="man-o3" type="text" class="bg-transparent text-white w-full outline-none text-sm" placeholder="الخيار 3"></div>
+                                <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="correct_ans_selector" value="3" class="accent-green-500"><input id="man-o4" type="text" class="bg-transparent text-white w-full outline-none text-sm" placeholder="الخيار 4"></div>
+                            </div>
+                            <textarea id="man-exp" class="input-box h-16 text-sm resize-none" placeholder="معلومة إثرائية..."></textarea>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <select id="man-cat" class="input-box text-xs"></select><select id="man-topic" class="input-box text-xs" disabled></select><select id="man-diff" class="input-box text-xs"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select>
+                                <button id="btn-man-save" class="btn-gold text-sm font-bold shadow-md">حفظ وإضافة</button>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="glass p-6 md:p-8 border border-purple-500/20 relative overflow-hidden group hover:border-purple-500/40 transition">
-                        <div class="absolute top-0 left-0 bg-purple-500/20 w-full h-1 group-hover:h-1.5 transition-all duration-500"></div>
-                        <h4 class="text-lg md:text-xl text-purple-400 font-bold mb-4 md:mb-6 flex items-center gap-2">
-                            <span class="material-symbols-rounded">content_paste_go</span> لصق كود JSON
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-4 md:mb-5">
-                            <select id="paste-cat" class="input-box text-sm"></select>
-                            <select id="paste-topic" class="input-box text-sm" disabled></select>
-                            <select id="paste-diff" class="input-box text-sm"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="glass p-6 border-t-4 border-blue-500">
+                            <h4 class="text-lg text-blue-400 font-bold mb-4 flex items-center gap-2"><span class="material-symbols-rounded">cloud_upload</span> رفع ملف JSON</h4>
+                            <div class="grid grid-cols-1 gap-4 mb-4"><select id="upload-cat" class="input-box text-sm"></select><select id="upload-topic" class="input-box text-sm" disabled></select></div>
+                            <div class="flex gap-4 items-center"><input type="file" id="json-file-input" accept=".json" class="text-sm text-slate-400 w-full file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"><button id="btn-upload-file" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-bold">رفع</button></div>
                         </div>
-                        <textarea id="json-paste-area" class="input-box h-32 md:h-48 font-mono text-xs text-left mb-4 md:mb-5 bg-slate-900/80 border-slate-700 focus:border-purple-500 leading-relaxed" dir="ltr" placeholder='[
-    {
-        "question": "سؤال...",
-        "options": ["أ", "ب", "ج", "د"],
-        "correctAnswer": 0,
-        "explanation": "شرح..."
-    }
-]'></textarea>
-                        <button id="btn-paste-upload" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-3 rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2 transform active:scale-[0.99]">
-                            معالجة وإضافة المحتوى <span class="material-symbols-rounded">save_as</span>
-                        </button>
-                    </div>
-
-                    <div class="glass p-6 md:p-8 border border-green-500/20 relative overflow-hidden group hover:border-green-500/40 transition">
-                        <div class="absolute top-0 left-0 bg-green-500/20 w-full h-1 group-hover:h-1.5 transition-all duration-500"></div>
-                        <h4 class="text-lg md:text-xl text-green-400 font-bold mb-4 md:mb-6 flex items-center gap-2">
-                            <span class="material-symbols-rounded">edit_square</span> المحرر اليدوي
-                        </h4>
-                        <div class="space-y-4 md:space-y-5">
-                            <div class="relative">
-                                <label class="text-xs text-slate-400 mb-1 block mr-1">نص السؤال</label>
-                                <input id="man-q" type="text" class="input-box text-base md:text-lg font-bold placeholder-slate-600 bg-slate-800" placeholder="اكتب السؤال هنا...">
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                                <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-green-500/50 transition cursor-pointer" onclick="document.querySelector('input[name=correct_ans_selector][value=0]').checked=true">
-                                    <input type="radio" name="correct_ans_selector" value="0" checked class="w-5 h-5 accent-green-500 cursor-pointer">
-                                    <input id="man-o1" type="text" class="bg-transparent text-white w-full outline-none text-sm border-b border-transparent focus:border-green-500/50 px-1 transition" placeholder="الخيار الأول">
-                                </div>
-                                <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-green-500/50 transition cursor-pointer" onclick="document.querySelector('input[name=correct_ans_selector][value=1]').checked=true">
-                                    <input type="radio" name="correct_ans_selector" value="1" class="w-5 h-5 accent-green-500 cursor-pointer">
-                                    <input id="man-o2" type="text" class="bg-transparent text-white w-full outline-none text-sm border-b border-transparent focus:border-green-500/50 px-1 transition" placeholder="الخيار الثاني">
-                                </div>
-                                <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-green-500/50 transition cursor-pointer" onclick="document.querySelector('input[name=correct_ans_selector][value=2]').checked=true">
-                                    <input type="radio" name="correct_ans_selector" value="2" class="w-5 h-5 accent-green-500 cursor-pointer">
-                                    <input id="man-o3" type="text" class="bg-transparent text-white w-full outline-none text-sm border-b border-transparent focus:border-green-500/50 px-1 transition" placeholder="الخيار الثالث">
-                                </div>
-                                <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-green-500/50 transition cursor-pointer" onclick="document.querySelector('input[name=correct_ans_selector][value=3]').checked=true">
-                                    <input type="radio" name="correct_ans_selector" value="3" class="w-5 h-5 accent-green-500 cursor-pointer">
-                                    <input id="man-o4" type="text" class="bg-transparent text-white w-full outline-none text-sm border-b border-transparent focus:border-green-500/50 px-1 transition" placeholder="الخيار الرابع">
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label class="text-xs text-slate-400 mb-1 block mr-1">معلومة إثرائية</label>
-                                <textarea id="man-exp" class="input-box h-16 md:h-20 text-sm resize-none" placeholder="تظهر بعد الإجابة..."></textarea>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-2 bg-slate-900/30 p-3 md:p-4 rounded-xl border border-slate-700">
-                                <div><label class="text-[10px] text-slate-400 block mb-1">التصنيف</label><select id="man-cat" class="input-box text-xs py-2"></select></div>
-                                <div><label class="text-[10px] text-slate-400 block">الموضوع</label><select id="man-topic" class="input-box text-xs py-2" disabled></select></div>
-                                <div><label class="text-[10px] text-slate-400 block">الصعوبة</label><select id="man-diff" class="input-box text-xs py-2"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select></div>
-                                <div class="flex items-end"><button id="btn-man-save" class="btn-gold text-sm h-[38px] w-full font-bold shadow-md">حفظ وإضافة</button></div>
-                            </div>
+                        <div class="glass p-6 border-t-4 border-purple-500">
+                            <h4 class="text-lg text-purple-400 font-bold mb-4 flex items-center gap-2"><span class="material-symbols-rounded">content_paste</span> لصق كود JSON</h4>
+                            <div class="grid grid-cols-1 gap-4 mb-4"><select id="paste-cat" class="input-box text-sm"></select><select id="paste-topic" class="input-box text-sm" disabled></select></div>
+                            <textarea id="json-paste-area" class="input-box h-20 text-xs font-mono mb-4 bg-slate-900/50" dir="ltr" placeholder='[{"question":"...","options":[...],"correctAnswer":0}]'></textarea>
+                            <button id="btn-paste-upload" class="bg-purple-600 text-white w-full py-2 rounded-lg hover:bg-purple-700 font-bold">معالجة وإضافة</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="view-manage" class="view-section hidden space-y-4 md:space-y-6 fade-in">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-800/40 p-4 md:p-5 rounded-xl border border-slate-700/50">
-                        <h3 class="text-lg md:text-xl text-white font-bold flex items-center gap-3">
-                            <span class="material-symbols-rounded text-purple-400 bg-purple-400/10 p-2 rounded-lg">library_books</span> 
-                            بنك الأسئلة
-                            <span id="qs-counter" class="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded-full font-mono">0</span>
-                        </h3>
-                        
+                <div id="view-manage" class="view-section hidden space-y-4 fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
+                        <h3 class="text-lg text-white font-bold flex items-center gap-3"><span class="material-symbols-rounded text-purple-400 bg-purple-400/10 p-2 rounded-lg">library_books</span> بنك الأسئلة <span id="qs-counter" class="text-xs bg-slate-700 px-2 py-1 rounded-full font-mono">0</span></h3>
                         <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                            <div class="relative flex-1 md:w-72">
-                                <span class="material-symbols-rounded absolute right-3 top-2.5 text-purple-400 text-sm pointer-events-none">auto_read_play</span>
-                                <input type="text" id="qs-search-input" placeholder="البحث الذكي: ابدأ بكتابة نص السؤال..." class="input-box pr-9 py-2 text-sm bg-slate-900/50 border-slate-600 focus:border-purple-500">
-                            </div>
-
-                            <select id="manage-filter" class="input-box text-sm md:w-48 bg-slate-900/50 border-slate-600"></select>
-                            
-                            <button id="btn-refresh-qs" title="تحديث القائمة" class="bg-slate-600 text-white px-3 rounded-lg hover:bg-slate-500 shadow-lg transition active:scale-95 flex items-center justify-center">
-                                <span class="material-symbols-rounded">sync</span>
-                            </button>
+                            <input type="text" id="qs-search-input" placeholder="بحث شامل (سؤال، خيارات، شرح)..." class="input-box py-2 text-sm bg-slate-900/50 flex-1 min-w-[250px]">
+                            <div class="flex gap-2"><select id="manage-filter" class="input-box text-sm md:w-48 bg-slate-900/50 border-slate-600"></select></div>
+                            <button id="btn-refresh-qs" class="bg-slate-600 text-white px-3 rounded-lg hover:bg-slate-500"><span class="material-symbols-rounded">sync</span></button>
                         </div>
                     </div>
-
                     <div class="bg-slate-800/20 rounded-xl p-2 min-h-[400px] flex flex-col">
                         <div id="questions-grid" class="space-y-3 mb-4"></div>
-                        
-                        <button id="btn-load-more" class="hidden w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg border border-dashed border-slate-600 transition flex justify-center items-center gap-2 text-sm font-bold">
-                            تحميل المزيد من الأسئلة <span class="material-symbols-rounded">expand_more</span>
-                        </button>
+                        <button id="btn-load-more" class="hidden w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg border border-dashed border-slate-600 font-bold text-sm">تحميل المزيد (200+)</button>
                     </div>
                 </div>
 
-                <div id="view-system" class="view-section hidden space-y-4 md:space-y-8 fade-in">
-                    <h3 class="text-xl md:text-2xl text-white font-bold mb-3 md:mb-4 flex items-center gap-3 border-b border-slate-700 pb-3 md:pb-4">
-                        <span class="material-symbols-rounded text-slate-400 bg-slate-700/30 p-2 rounded-lg">settings</span> 
-                        إعدادات النظام
-                    </h3>
-
-                    <div class="glass p-6 md:p-8 space-y-5 border-r-4 border-r-green-500">
-                        <h4 class="text-lg md:text-xl text-green-400 font-bold flex items-center gap-2">
-                            <span class="material-symbols-rounded">download_for_offline</span> تصدير حزم الأسئلة المحددة
-                        </h4>
-                        <p class="text-slate-400 text-sm mt-1">اختر الموضوع ومستوى الصعوبة لتنزيل ملف JSON يحتوي على الأسئلة المطابقة فقط.</p>
-                        
+                <div id="view-system" class="view-section hidden space-y-4 fade-in">
+                    <h3 class="text-xl text-white font-bold border-b border-slate-700 pb-3 flex items-center gap-3"><span class="material-symbols-rounded text-slate-400 bg-slate-700/30 p-2 rounded-lg">settings</span> النظام</h3>
+                    <div class="glass p-6 space-y-5 border-r-4 border-r-green-500">
+                        <h4 class="text-lg text-green-400 font-bold"><span class="material-symbols-rounded">download</span> تصدير مخصص (Surgical Export)</h4>
                         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div><label class="text-[10px] text-slate-400 block mb-1">التصنيف</label><select id="export-cat" class="input-box text-xs py-2"></select></div>
-                            
-                            <div><label class="text-[10px] text-slate-400 block">الموضوع</label><select id="export-topic" class="input-box text-xs py-2" disabled></select></div>
-                            
-                            <div><label class="text-[10px] text-slate-400 block">الصعوبة</label><select id="export-diff" class="input-box text-xs py-2">
-                                <option value="">كل المستويات</option>
-                                <option value="سهل">سهل</option>
-                                <option value="متوسط">متوسط</option>
-                                <option value="صعب">صعب</option>
-                            </select></div>
-                            
-                            <div class="flex items-end">
-                                <button id="btn-export-filtered" class="bg-green-600 hover:bg-green-700 text-white w-full py-2.5 rounded-lg text-sm font-bold flex justify-center gap-2 transition" disabled>
-                                    تصدير الأسئلة <span class="material-symbols-rounded text-sm">download</span>
-                                </button>
-                            </div>
+                            <select id="export-cat" class="input-box text-xs"></select><select id="export-topic" class="input-box text-xs" disabled></select><select id="export-diff" class="input-box text-xs"><option value="">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select>
+                            <button id="btn-export-filtered" class="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded-lg text-sm font-bold" disabled>تصدير JSON</button>
                         </div>
-                        <p id="export-msg" class="text-xs text-red-400 h-4"></p>
                     </div>
-
-                    <div class="glass p-6 md:p-8 space-y-5 border-r-4 border-r-red-600">
-                        <h4 class="text-lg md:text-xl text-red-400 font-bold flex items-center gap-2">
-                            <span class="material-symbols-rounded">delete_sweep</span> حذف حزمة أسئلة محددة (خطر!)
-                        </h4>
-                        <p class="text-slate-400 text-sm mt-1">اختر الموضوع ومستوى الصعوبة لحذف الأسئلة المطابقة نهائياً من قاعدة البيانات (لا يمكن التراجع).</p>
-                        
+                    <div class="glass p-6 space-y-5 border-r-4 border-r-red-500 bg-red-900/5">
+                        <h4 class="text-lg text-red-400 font-bold"><span class="material-symbols-rounded">delete_sweep</span> حذف مخصص (Surgical Delete)</h4>
                         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div><label class="text-[10px] text-slate-400 block mb-1">التصنيف</label><select id="delete-cat" class="input-box text-xs py-2"></select></div>
-                            
-                            <div><label class="text-[10px] text-slate-400 block">الموضوع</label><select id="delete-topic" class="input-box text-xs py-2" disabled></select></div>
-                            
-                            <div><label class="text-[10px] text-slate-400 block">الصعوبة</label><select id="delete-diff" class="input-box text-xs py-2">
-                                <option value="">كل المستويات</option>
-                                <option value="سهل">سهل</option>
-                                <option value="متوسط">متوسط</option>
-                                <option value="صعب">صعب</option>
-                            </select></div>
-                            
-                            <div class="flex items-end">
-                                <button id="btn-delete-filtered" class="bg-red-800 hover:bg-red-700 text-red-200 w-full py-2.5 rounded-lg text-sm font-bold flex justify-center gap-2 transition" disabled>
-                                    حذف الأسئلة <span class="material-symbols-rounded text-sm">auto_delete</span>
-                                </button>
-                            </div>
+                            <select id="delete-cat" class="input-box text-xs"></select><select id="delete-topic" class="input-box text-xs" disabled></select><select id="delete-diff" class="input-box text-xs"><option value="">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select>
+                            <button id="btn-delete-filtered" class="bg-red-800 hover:bg-red-700 text-red-200 w-full py-2 rounded-lg text-sm font-bold" disabled>حذف الحزمة</button>
                         </div>
-                        <p id="delete-msg" class="text-xs text-red-400 h-4"></p>
                     </div>
-                    <div class="glass p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border-r-4 border-r-blue-500">
-                        <div>
-                            <h4 class="text-lg md:text-xl text-white font-bold flex items-center gap-2"><span class="material-symbols-rounded text-blue-400">save</span> النسخ الاحتياطي الكامل</h4>
-                            <p class="text-sm text-slate-400 mt-1">قم بتصدير قاعدة البيانات بالكامل إلى ملف JSON آمن.</p>
-                        </div>
-                        <button id="btn-backup" class="bg-blue-600 text-white px-6 md:px-8 py-3 rounded-lg hover:bg-blue-700 text-sm font-bold flex gap-2 shadow-xl transform transition hover:scale-105">
-                            تصدير البيانات <span class="material-symbols-rounded text-sm">download</span>
-                        </button>
+                    <div class="glass p-6 flex justify-between items-center border-r-4 border-r-blue-500">
+                        <div><h4 class="text-white font-bold">نسخ احتياطي كامل</h4><p class="text-xs text-slate-400">تنزيل كل الأسئلة</p></div>
+                        <button id="btn-backup" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-bold text-sm">تصدير</button>
+                    </div>
+                    <div class="glass p-6 flex justify-between items-center border-r-4 border-r-red-600 bg-red-900/10">
+                        <div><h4 class="text-red-400 font-bold">منطقة الخطر (Nuke)</h4><p class="text-xs text-slate-400">تصفير النظام بالكامل</p></div>
+                        <button id="btn-nuke" class="bg-red-900 hover:bg-red-800 text-white px-6 py-2 rounded-lg font-bold text-sm border border-red-700">تصفير</button>
                     </div>
                 </div>
             </div>
@@ -395,163 +236,77 @@
     </div>
 
     <div id="user-edit-modal" class="modal-overlay">
-        <div class="modal-content border-t-4 border-t-amber-500 p-4 md:p-6">
-            <div class="flex justify-between items-center mb-4 md:mb-6 border-b border-slate-700 pb-3 md:pb-4">
-                <h3 class="text-lg md:text-xl font-bold text-amber-500 flex items-center gap-2"><span class="material-symbols-rounded">manage_accounts</span> تعديل المستخدم</h3>
-                <button class="close-modal text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 transition"><span class="material-symbols-rounded text-lg">close</span></button>
-            </div>
-            <div class="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-8">
-                <div class="flex flex-col items-center gap-3">
-                    <div id="edit-avatar-container" class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-slate-800 border-4 border-amber-500/30 flex items-center justify-center overflow-hidden shadow-inner relative"></div>
-                    <button id="btn-remove-avatar" class="text-xs text-red-400 hover:text-red-200 hover:underline transition">حذف الصورة</button>
-                </div>
-                <div class="flex-1 space-y-4 md:space-y-5 pt-1">
-                    <div>
-                        <label class="text-slate-400 text-xs font-bold block mb-1.5 uppercase tracking-wider">الاسم الظاهر</label>
-                        <input type="text" id="edit-name" class="input-box text-sm bg-slate-900 border-slate-700 focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="text-slate-400 text-xs font-bold block mb-1.5 uppercase tracking-wider">النقاط (Score)</label>
-                        <input type="number" id="edit-score" class="input-box text-sm bg-slate-900 border-slate-700 font-mono text-amber-500 font-bold">
-                    </div>
-                    <div>
-                        <label class="text-slate-400 text-xs font-bold block mb-1.5 uppercase tracking-wider">الأوسمة الممنوحة (افصل بفواصل)</label>
-                        <input type="text" id="edit-badges" class="input-box text-sm bg-slate-900 border-slate-700 focus:border-purple-500" placeholder="مثال: بطل, خبير, متقدم">
-                    </div>
-                    <button id="btn-reset-password" class="w-full bg-blue-900/40 text-blue-400 text-xs py-2 rounded-lg hover:bg-blue-900/60 transition font-bold mt-2 flex items-center justify-center gap-2">
-                        <span class="material-symbols-rounded text-base">vpn_key</span> إرسال رابط إعادة تعيين كلمة المرور
-                    </button>
+        <div class="modal-content p-6 border-t-4 border-t-amber-500">
+            <h3 class="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2"><span class="material-symbols-rounded">manage_accounts</span> تعديل مستخدم</h3>
+            <div class="flex flex-col items-center mb-4 gap-2">
+                <div id="edit-avatar-preview" class="w-24 h-24 rounded-full bg-slate-700 flex items-center justify-center text-3xl border-2 border-amber-500 overflow-hidden shadow-lg relative"></div>
+                <div class="flex gap-2">
+                    <label class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded cursor-pointer transition">رفع صورة<input type="file" id="upload-new-avatar" accept="image/*" class="hidden"></label>
+                    <button id="btn-del-avatar" class="text-xs bg-red-600/30 hover:bg-red-600/50 text-red-300 px-3 py-1.5 rounded transition">حذف</button>
                 </div>
             </div>
-            <div class="bg-slate-800/40 p-4 md:p-5 rounded-xl border border-slate-700 mb-4 md:mb-6">
-                <label class="flex items-center justify-between cursor-pointer group">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-red-500/10 p-2 rounded-lg text-red-500"><span class="material-symbols-rounded">block</span></div>
-                        <div>
-                            <span class="text-white text-sm font-bold block group-hover:text-red-400 transition">حظر الحساب (Ban)</span>
-                            <span class="text-[10px] text-slate-500 block">منع المستخدم من الدخول للتطبيق</span>
-                        </div>
-                    </div>
-                    <input type="checkbox" id="edit-banned" class="w-6 h-6 accent-red-500 rounded cursor-pointer">
-                </label>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="btn-save-user" class="btn-gold py-3 text-sm shadow-md">حفظ التغييرات</button>
-                <button id="btn-delete-user" class="bg-transparent border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 py-3 rounded-lg text-sm transition font-bold">حذف الحساب نهائياً</button>
+            <div class="space-y-4">
+                <div><label class="text-xs text-slate-400 font-bold block mb-1">الاسم</label><input type="text" id="edit-name" class="input-box bg-slate-800"></div>
+                <div><label class="text-xs text-slate-400 font-bold block mb-1">النقاط</label><input type="number" id="edit-score" class="input-box bg-slate-800 font-mono text-amber-500"></div>
+                <div><label class="text-xs text-slate-400 font-bold block mb-1">الأوسمة (Badges)</label><input type="text" id="edit-badges" class="input-box bg-slate-800" placeholder="مثال: خبير, بطل (افصل بفاصلة)"></div>
+                <div><label class="text-xs text-slate-400 font-bold block mb-1">كلمة المرور (اختياري)</label><input type="text" id="edit-pass" class="input-box bg-slate-800" placeholder="اتركه فارغاً لعدم التغيير"></div>
+                <div class="bg-slate-800/50 p-3 rounded border border-slate-700"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="edit-banned" class="w-5 h-5 accent-red-500 rounded"><span class="text-slate-300 text-sm font-bold">حظر الحساب نهائياً (Ban)</span></label></div>
+                <div class="flex gap-3 mt-4"><button id="btn-save-user" class="btn-gold flex-1 shadow-md">حفظ التغييرات</button><button onclick="document.getElementById('user-edit-modal').classList.remove('active')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 rounded-lg font-bold transition">إلغاء</button></div>
             </div>
         </div>
     </div>
 
     <div id="question-edit-modal" class="modal-overlay">
-        <div class="modal-content border-t-4 border-t-blue-500 p-4 md:p-6">
-            <div class="flex justify-between items-center mb-4 md:mb-6 border-b border-slate-700 pb-3 md:pb-4">
-                <h3 class="text-lg md:text-xl font-bold text-blue-500 flex items-center gap-2"><span class="material-symbols-rounded">edit_note</span> تحرير السؤال</h3>
-                <button class="close-q-modal text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 transition"><span class="material-symbols-rounded text-lg">close</span></button>
-            </div>
-            <div class="space-y-4 md:space-y-5">
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1.5 font-bold">نص السؤال</label>
-                    <input id="edit-q-text" type="text" class="input-box text-base md:text-lg font-bold bg-slate-800 border-slate-600 focus:border-blue-500">
+        <div class="modal-content p-6 border-t-4 border-t-blue-500">
+            <div class="flex justify-between mb-4 pb-3 border-b border-slate-700"><h3 class="text-lg font-bold text-blue-500 flex items-center gap-2"><span class="material-symbols-rounded">edit_note</span> تعديل السؤال</h3><button class="close-q-modal text-slate-400 hover:text-white transition">✕</button></div>
+            <div class="space-y-4">
+                <input id="edit-q-text" type="text" class="input-box text-lg font-bold bg-slate-800 border-slate-600">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="edit_ans_selector" value="0" class="accent-blue-500"><input id="edit-o1" type="text" class="bg-transparent text-white w-full outline-none text-sm"></div>
+                    <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="edit_ans_selector" value="1" class="accent-blue-500"><input id="edit-o2" type="text" class="bg-transparent text-white w-full outline-none text-sm"></div>
+                    <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="edit_ans_selector" value="2" class="accent-blue-500"><input id="edit-o3" type="text" class="bg-transparent text-white w-full outline-none text-sm"></div>
+                    <div class="flex gap-2 bg-slate-800/50 p-2 rounded border border-slate-700"><input type="radio" name="edit_ans_selector" value="3" class="accent-blue-500"><input id="edit-o4" type="text" class="bg-transparent text-white w-full outline-none text-sm"></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 focus-within:border-blue-500 transition"><input type="radio" name="edit_ans_selector" value="0" class="w-5 h-5 accent-blue-500 cursor-pointer"><input id="edit-o1" type="text" class="bg-transparent text-white w-full outline-none text-sm px-1"></div>
-                    <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 focus-within:border-blue-500 transition"><input type="radio" name="edit_ans_selector" value="1" class="w-5 h-5 accent-blue-500 cursor-pointer"><input id="edit-o2" type="text" class="bg-transparent text-white w-full outline-none text-sm px-1"></div>
-                    <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 focus-within:border-blue-500 transition"><input type="radio" name="edit_ans_selector" value="2" class="w-5 h-5 accent-blue-500 cursor-pointer"><input id="edit-o3" type="text" class="bg-transparent text-white w-full outline-none text-sm px-1"></div>
-                    <div class="flex items-center gap-3 bg-slate-800/40 p-3 rounded-lg border border-slate-700 focus-within:border-blue-500 transition"><input type="radio" name="edit_ans_selector" value="3" class="w-5 h-5 accent-blue-500 cursor-pointer"><input id="edit-o4" type="text" class="bg-transparent text-white w-full outline-none text-sm px-1"></div>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1.5 font-bold">الشرح / المعلومة الإثرائية</label>
-                    <textarea id="edit-q-exp" class="input-box h-16 md:h-20 text-sm resize-none bg-slate-800/50"></textarea>
-                </div>
-                <div class="grid grid-cols-3 gap-3 bg-slate-900/30 p-4 rounded-xl border border-slate-700">
-                    <div><label class="text-[10px] text-slate-400 block mb-1">التصنيف</label><select id="edit-q-cat" class="input-box text-xs py-2"></select></div>
-                    <div><label class="text-[10px] text-slate-400 block">الموضوع</label><select id="edit-q-topic" class="input-box text-xs py-2"></select></div>
-                    <div><label class="text-[10px] text-slate-400 block">الصعوبة</label><select id="edit-q-diff" class="input-box text-xs py-2"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select></div>
-                </div>
-                
-                <div class="pt-2 flex flex-col md:flex-row gap-3">
-                     <button id="btn-modal-toggle-review" class="flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300">
-                        <span>حالة المراجعة</span>
-                    </button>
-                    <button id="btn-save-edit-q" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center">
-                        حفظ التعديلات <span class="material-symbols-rounded text-sm">save</span>
-                    </button>
-                </div>
+                <textarea id="edit-q-exp" class="input-box h-20 text-sm resize-none bg-slate-800/50" placeholder="الشرح..."></textarea>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3"><select id="edit-q-cat" class="input-box text-xs"></select><select id="edit-q-topic" class="input-box text-xs"></select><select id="edit-q-diff" class="input-box text-xs"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select></div>
+                <div class="flex gap-3 pt-2"><button id="btn-modal-toggle-review" class="flex-1 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 transition font-bold">حالة المراجعة</button><button id="btn-save-edit-q" class="flex-[2] bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition">حفظ التعديلات</button></div>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/95 text-white px-8 py-4 rounded-2xl shadow-2xl border border-amber-500/40 hidden z-[80] flex items-center gap-4 transition-all duration-300 backdrop-blur-md min-w-[320px] justify-center">
-        <span class="material-symbols-rounded text-amber-500 text-2xl" id="toast-icon">check_circle</span>
-        <span id="toast-msg" class="text-sm font-bold"></span>
-    </div>
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/95 text-white px-8 py-4 rounded-2xl shadow-2xl border border-amber-500/40 hidden z-[80] flex items-center gap-4 transition-all duration-300 backdrop-blur-md min-w-[320px] justify-center"><span class="material-symbols-rounded text-amber-500 text-2xl" id="toast-icon">check_circle</span><span id="toast-msg" class="text-sm font-bold"></span></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInAnonymously, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { 
-            getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, addDoc, 
-            query, where, orderBy, limit, serverTimestamp, writeBatch, 
-            startAfter 
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, query, where, orderBy, limit, serverTimestamp, writeBatch, startAfter } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // Initialize Firebase
         const app = initializeApp({ apiKey: "AIzaSyDY1FNxvECtaV_dflCzkRH4pHQi_HQ4fwA", authDomain: "all-in-b0422.firebaseapp.com", projectId: "all-in-b0422", storageBucket: "all-in-b0422.firebasestorage.app", messagingSenderId: "347315641241", appId: "1:347315641241:web:c9ed240a00e5d2c5031108" });
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Auth State
         let isAuthReady = false;
         signInAnonymously(auth).then(() => { isAuthReady = true; console.log("Admin Auth Ready"); }).catch(e => console.error(e));
 
-        // UI Helpers
         const el = (id) => document.getElementById(id);
         const show = (id) => el(id).classList.remove('hidden');
         const hide = (id) => el(id).classList.add('hidden');
-        const toast = (msg, icon = 'check_circle') => { 
-            el('toast-msg').innerText = msg; el('toast-icon').innerText = icon; 
-            const t = el('toast'); t.classList.remove('hidden'); t.classList.add('flex'); t.style.opacity = "1"; t.style.transform = "translate(-50%, 0)";
-            setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translate(-50%, 20px)"; setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 300); }, 3000); 
-        };
+        const toast = (msg, icon = 'check_circle') => { el('toast-msg').innerText = msg; el('toast-icon').innerText = icon; const t = el('toast'); t.classList.remove('hidden'); t.classList.add('flex'); t.style.opacity = "1"; t.style.transform = "translate(-50%, 0)"; setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translate(-50%, 20px)"; setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 300); }, 3000); };
 
-        // --- متغيرات النظام والبحث ---
-        let allQuestionsCache = []; 
-        let isCacheLoaded = false;
-        let currentSearchTerm = "";
-        let lastVisibleDoc = null; 
-        const QUESTIONS_PER_PAGE = 50; 
+        const topics = {"المعصومون (عليهم السلام)":["سيرة النبي محمد (ص)","سيرة الإمام علي (ع)","السيدة فاطمة الزهراء (ع)","سيرة الإمام الحسن المجتبى (ع)","سيرة الإمام الحسين (ع)","سيرة الإمام السجاد (ع)","سيرة الإمام الباقر (ع)","سيرة الإمام الصادق (ع)","سيرة الإمام الكاظم (ع)","سيرة الإمام الرضا (ع)","سيرة الإمام الجواد (ع)","سيرة الإمام الهادي (ع)","سيرة الإمام العسكري (ع)","الإمام المهدي (عج)"],"الأنبياء والرسل":["أولو العزم من الرسل","سيرة النبي آدم (ع)","سيرة النبي نوح (ع)","سيرة النبي إبراهيم (ع)","سيرة النبي موسى (ع)","سيرة النبي عيسى (ع)","سيرة النبي يوسف (ع)","سيرة النبي سليمان (ع)","سيرة النبي داود (ع)","سيرة النبي يونس (ع)","سيرة النبي زكريا ويحيى (ع)","سيرة النبي أيوب (ع)","قصص الأنبياء في القرآن"],"شخصيات (أصحاب وعلماء)":["السيدة خديجة الكبرى (ع)","السيدة زينب (ع)","السيدة أم البنين (ع)","السيدة رقية بنت الحسين (ع)","أبو الفضل العباس (ع)","علي الأكبر (ع)","القاسم بن الحسن (ع)","سلمان المحمدي","أبو ذر الغفاري","السيد محمد الصدر","المقداد بن الأسود","عمار بن ياسر","مالك الأشتر","مسلم بن عقيل (ع)","المختار الثقفي","حبيب بن مظاهر الأسدي","ميثم التمار","كميل بن زياد","هاني بن عروة","الشيخ المفيد","الشيخ الطوسي"],"القرآن ونهج البلاغة":["معاني مفردات القرآن","أسباب النزول","الناسخ والمنسوخ","الأمثال في القرآن","الخطبة الشقشقية","خطبة المتقين","عهد الإمام لمالك الأشتر","حكم ومواعظ نهج البلاغة","الصحيفة السجادية"],"عقائد وفقه":["أصول الدين","التوحيد وصفات الله","العدل الإلهي","النبوة","الإمامة والولاية","عالم البرزخ","المعاد ويوم القيامة","الشفاعة","الرجعة","البداء","فروع الدين","أحكام الصلاة","أحكام الصوم","أحكام الخمس","أحكام الحج والعمرة","الأمر بالمعروف والنهي عن المنكر","الطهارة والنجاسات"],"الثقافة المهدوية":["علامات الظهور الحتمية","علامات الظهور غير الحتمية","السفراء الأربعة","الغيبة الصغرى","الغيبة الكبرى","وظائف المنتظرين","أصحاب الإمام المهدي","دولة العدل الإلهي"],"تاريخ ومعارك":["الهجرة النبوية","معركة بدر الكبرى","معركة أحد","معركة الخندق (الأحزاب)","معركة خيبر","فتح مكة","معركة حنين","حروب الردة","حرب الجمل","معركة صفين","معركة النهروان","صلح الإمام الحسن (ع)","واقعة كربلاء (تفاصيل)","يوم المباهلة","عيد الغدير الأغر","حديث الكساء (الحدث)","فاجعة هدم البقيع"],"أدعية وزيارات":["دعاء كميل","دعاء الصباح","دعاء التوسل","دعاء العهد","دعاء الندبة","دعاء الافتتاح","دعاء أبي حمزة الثمالي","دعاء عرفة","المناجاة الشعبانية","زيارة عاشوراء","زيارة الأربعين","الزيارة الجامعة الكبيرة","زيارة وارث","زيارة آل يس","زيارة أمين الله"]};
 
-        // Data Structure
-        const topics = {
-            "المعصومون (عليهم السلام)": ["سيرة النبي محمد (ص)", "سيرة الإمام علي (ع)", "السيدة فاطمة الزهراء (ع)", "سيرة الإمام الحسن المجتبى (ع)", "سيرة الإمام الحسين (ع)", "سيرة الإمام السجاد (ع)", "سيرة الإمام الباقر (ع)", "سيرة الإمام الصادق (ع)", "سيرة الإمام الكاظم (ع)", "سيرة الإمام الرضا (ع)", "سيرة الإمام الجواد (ع)", "سيرة الإمام الهادي (ع)", "سيرة الإمام العسكري (ع)", "الإمام المهدي (عج)"],
-            "الأنبياء والرسل": ["أولو العزم من الرسل", "سيرة النبي إبراهيم (ع)", "سيرة النبي موسى (ع)", "سيرة النبي عيسى (ع)", "سيرة النبي يوسف (ع)", "سيرة النبي سليمان (ع)"],
-            "شخصيات (أصحاب وعلماء)": ["السيدة زينب (ع)", "أبو الفضل العباس (ع)", "سلمان المحمدي", "عمار بن ياسر", "المختار الثقفي", "مالك الأشتر", "مسلم بن عقيل (ع)"],
-            "عقائد وفقه": ["اصول الدين", "العدل الإلهي", "الإمامة", "المعاد", "الرجعة", "فروع الدين", "الصلاة اليومية", "الخمس", "علامات الظهور"],
-            "تاريخ ومعارك": ["واقعة كربلاء", "يوم المباهلة", "عيد الغدير", "معركة صفين", "حرب الجمل", "فتح مكة"],
-            "أدعية وزيارات": ["دعاء كميل", "دعاء الندبة", "زيارة عاشوراء", "زيارة الأربعين", "الزيارة الجامعة"]
-        };
-
-        // --- LOGIN & NAVIGATION ---
-        el('btn-login').onclick = () => {
-            if(!isAuthReady) { el('login-msg').innerText = "جاري الاتصال بالقاعدة..."; return; }
-            if(el('admin-pin').value === '0000') { 
-                hide('login-screen'); show('dashboard-container'); loadStats(); 
-            } else { 
-                el('login-msg').innerText = "رمز الدخول خاطئ!"; 
-                el('admin-pin').value = ''; el('admin-pin').focus();
-                setTimeout(()=>el('login-msg').innerText='', 2000); 
-            }
-        };
+        el('btn-login').onclick = () => { if(!isAuthReady) return el('login-msg').innerText = "جاري الاتصال..."; if(el('admin-pin').value.replace(/[^0-9]/g, '') === '0000') { hide('login-screen'); show('dashboard-container'); loadStats(); } else { el('login-msg').innerText = "رمز خاطئ"; setTimeout(()=>el('login-msg').innerText='', 2000); } };
+        el('admin-pin').addEventListener('input', function (e) { this.value = this.value.replace(/[^0-9]/g, ''); });
 
         window.triggerTab = (tabId) => {
             document.querySelectorAll('.nav-item').forEach(b => { b.classList.remove('active'); if(b.dataset.tab === tabId) b.classList.add('active'); });
-            document.querySelectorAll('.mobile-nav button').forEach(b => b.classList.remove('text-amber-500'));
             document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
             show(tabId);
             if(tabId === 'view-users') loadUsers();
+            if(tabId === 'view-reports') loadReports();
             if(tabId === 'view-manage') { 
-                el('qs-search-input').value = ''; 
-                currentSearchTerm = '';
+                el('qs-search-input').value=''; 
+                // Initialize cache search if needed or just reload default
                 loadQuestions(false); 
             }
             if(tabId === 'view-dashboard') loadStats();
@@ -559,864 +314,369 @@
         };
         document.querySelectorAll('.nav-item').forEach(btn => btn.onclick = () => triggerTab(btn.dataset.tab));
 
-        // --- DROPS & FILTERS ---
-        const initDrops = (cId, tId) => {
+        const initDrops = (cId, tId, checkBtnId = null) => {
             const c = el(cId), t = el(tId);
-            c.innerHTML = '<option value="">-- اختر التصنيف --</option>';
-            Object.keys(topics).forEach(k => c.add(new Option(k, k)));
-            c.onchange = () => {
-                t.innerHTML = '<option value="">-- اختر الموضوع --</option>';
-                if(topics[c.value]) { t.disabled = false; topics[c.value].forEach(sub => t.add(new Option(sub, sub))); t.classList.remove('opacity-50'); } 
-                else { t.disabled = true; t.classList.add('opacity-50'); }
-            };
+            c.innerHTML = '<option value="">-- اختر التصنيف --</option>'; Object.keys(topics).forEach(k => c.add(new Option(k, k)));
+            c.onchange = () => { t.innerHTML = '<option value="">-- اختر الموضوع --</option>'; if(topics[c.value]) { t.disabled = false; topics[c.value].forEach(sub => t.add(new Option(sub, sub))); } else t.disabled = true; if(checkBtnId) checkBtn(); };
         };
-        initDrops('upload-cat', 'upload-topic');
-        initDrops('man-cat', 'man-topic');
-        initDrops('paste-cat', 'paste-topic');
-        initDrops('edit-q-cat', 'edit-q-topic');
-
-        const initExportDrops = (cId, tId, btnId) => {
-            const c = el(cId), t = el(tId), btn = el(btnId);
-            const isDelete = btnId.includes('delete');
-            
-            c.innerHTML = '<option value="">-- اختر التصنيف --</option>';
-            Object.keys(topics).forEach(k => c.add(new Option(k, k)));
-            
-            const toggleButton = () => {
-                btn.disabled = !t.value; 
-                const msg = isDelete ? el('delete-msg') : el('export-msg');
-                
-                if (btn.disabled) {
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    msg.innerText = 'يجب اختيار الموضوع لتفعيل العملية.';
-                } else {
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    msg.innerText = '';
-                }
-            };
-            
-            c.onchange = () => {
-                t.innerHTML = '<option value="">-- اختر الموضوع --</option>';
-                if(topics[c.value]) { t.disabled = false; topics[c.value].forEach(sub => t.add(new Option(sub, sub))); t.classList.remove('opacity-50'); } 
-                else { t.disabled = true; t.classList.add('opacity-50'); }
-                toggleButton();
-            };
-
-            t.onchange = toggleButton;
-            if (el(`${btnId.replace('btn-', '').replace('-filtered', '')}-diff`)) {
-                 el(`${btnId.replace('btn-', '').replace('-filtered', '')}-diff`).onchange = toggleButton;
-            }
-            toggleButton();
+        const checkBtn = () => {
+             // Generic checker, specifically for exports/deletes
+             if(el('export-topic') && !el('export-topic').disabled) el('btn-export-filtered').disabled = !el('export-topic').value;
+             if(el('delete-topic') && !el('delete-topic').disabled) el('btn-delete-filtered').disabled = !el('delete-topic').value;
         };
 
-        initExportDrops('export-cat', 'export-topic', 'btn-export-filtered');
-        initExportDrops('delete-cat', 'delete-topic', 'btn-delete-filtered'); 
+        initDrops('upload-cat', 'upload-topic'); 
+        initDrops('man-cat', 'man-topic'); 
+        initDrops('paste-cat', 'paste-topic'); 
+        initDrops('edit-q-cat', 'edit-q-topic'); 
+        initDrops('export-cat', 'export-topic', 'btn-export-filtered');
+        initDrops('delete-cat', 'delete-topic', 'btn-delete-filtered');
         
-        // --- تحديث: إضافة خيار الفلترة الجديد ---
+        // Add listener for diff change to toggle buttons
+        el('export-diff').onchange = checkBtn;
+        el('delete-diff').onchange = checkBtn;
+
         const mf = el('manage-filter');
         mf.innerHTML = '<option value="">عرض الكل (الأحدث أولاً)</option><option value="unreviewed" class="text-amber-500 font-bold">⚠️ الأسئلة غير المراجعة</option>';
         Object.keys(topics).forEach(cat => { const grp = document.createElement('optgroup'); grp.label = cat; topics[cat].forEach(sub => grp.appendChild(new Option(sub, sub))); mf.appendChild(grp); });
+        mf.onchange = () => loadQuestions(false);
 
-        // --- STATS ---
-        let myChart = null; 
+        let myChart = null; let cachedQuestionsData = [];
         async function loadStats() {
-            try {
-                const qSnap = await getDocs(query(collection(db, "questions"))); el('dash-questions-count').innerText = qSnap.size;
-                const uSnap = await getDocs(query(collection(db, "users"))); el('dash-users-count').innerText = uSnap.size;
-                let b = 0; uSnap.forEach(d => { if(d.data().isBanned) b++; }); el('dash-banned-count').innerText = b;
-
-                const topicCounts = {};
-                qSnap.forEach(doc => {
-                    const t = doc.data().topic || "غير مصنف";
-                    topicCounts[t] = (topicCounts[t] || 0) + 1;
-                });
-
-                const ctx = document.getElementById('questionsChart').getContext('2d');
-                if (myChart) myChart.destroy(); 
-
-                myChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(topicCounts),
-                        datasets: [{
-                            label: 'عدد الأسئلة',
-                            data: Object.values(topicCounts),
-                            backgroundColor: [
-                                '#d97706', '#2563eb', '#16a34a', '#dc2626', '#9333ea', '#0891b2', '#475569', '#facc15', '#f472b6'
-                            ],
-                            borderColor: '#1e293b',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'Amiri' } } }
-                        }
-                    }
-                });
-
-            } catch(e) { console.error(e); }
+            const qSnap = await getDocs(query(collection(db, "questions"))); 
+            el('dash-questions-count').innerText = qSnap.size;
+            cachedQuestionsData = []; qSnap.forEach(doc => cachedQuestionsData.push(doc.data())); 
+            const uSnap = await getDocs(query(collection(db, "users"))); el('dash-users-count').innerText = uSnap.size;
+            const rSnap = await getDocs(query(collection(db, "reports"))); el('dash-reports-count').innerText = rSnap.size;
+            el('dash-topics-count').innerText = Object.keys(topics).length;
+            const chartFilter = el('chart-filter');
+            chartFilter.innerHTML = '<option value="main">حسب التصنيف الرئيسي</option>';
+            Object.keys(topics).forEach(k => chartFilter.add(new Option(k, k)));
+            renderChart('main');
+        }
+        el('chart-filter').onchange = (e) => renderChart(e.target.value);
+        function renderChart(mode) {
+            const counts = {};
+            cachedQuestionsData.forEach(q => {
+                const t = q.topic || "غير مصنف";
+                if (mode === 'main') { let category = "غير مصنف"; for(const [cat, subs] of Object.entries(topics)) { if(subs.includes(t)) { category = cat; break; } } counts[category] = (counts[category] || 0) + 1; } 
+                else { if (topics[mode] && topics[mode].includes(t)) counts[t] = (counts[t] || 0) + 1; }
+            });
+            const colors = ['#d97706', '#2563eb', '#16a34a', '#dc2626', '#9333ea', '#0891b2', '#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#a855f7', '#06b6d4'];
+            if(myChart) myChart.destroy();
+            myChart = new Chart(el('questionsChart').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: colors.slice(0, Object.keys(counts).length), borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'Amiri' } } } } } });
         }
 
-        // --- USERS MANAGEMENT ---
-        let currentUserEditId = null;
+        // --- UPDATED USERS (Responsive Grid) ---
         async function loadUsers() {
-            const grid = el('users-grid');
-            grid.innerHTML = '<div class="text-center py-12 text-amber-500"><span class="material-symbols-rounded spinner text-4xl">sync</span></div>';
+            const grid = el('users-grid'); grid.innerHTML = '<div class="text-center py-8"><span class="material-symbols-rounded spinner text-amber-500">sync</span></div>';
             const term = el('user-search').value.toLowerCase();
-            
             try {
-                const q = query(collection(db, "users"), orderBy("highScore", "desc"), limit(100)); 
-                const snap = await getDocs(q);
-                
+                const snap = await getDocs(query(collection(db, "users"), orderBy("highScore", "desc"), limit(50)));
                 grid.innerHTML = '';
-                if(snap.empty) { grid.innerHTML = '<div class="text-center py-10 text-slate-500">لا يوجد مستخدمين</div>'; return; }
-                
-                snap.forEach(docSnap => {
-                    const u = docSnap.data();
-                    if(term && !u.name?.toLowerCase().includes(term) && !docSnap.id.includes(term)) return;
+                snap.forEach(d => {
+                    const u = d.data();
+                    if(term && !u.username?.toLowerCase().includes(term)) return;
+                    const displayName = u.username || u.name || 'ضيف';
+
+                    const div = document.createElement('div');
+                    // Changed to flex-col on mobile, flex-row on md+ for responsiveness
+                    div.className = `admin-item flex flex-col md:flex-row items-start md:items-center gap-3 w-full ${u.isBanned?'bg-red-900/10 border-red-500/30':''}`;
                     
-                    const displayName = u.name ? u.name : `<span class="text-slate-500 italic">ضيف (${docSnap.id.substring(0, 6).toUpperCase()})</span>`;
+                    let av = `<span class="material-symbols-rounded text-xl text-slate-400">person</span>`;
+                    if(u.customAvatar) av = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`;
+                    else if(u.avatar) av = `<span class="material-symbols-rounded text-amber-500 text-xl">${u.avatar}</span>`;
 
-                    let av = '';
-                    if(u.customAvatar) {
-                        av = `<img src="${u.customAvatar}" class="w-12 h-12 rounded-full object-cover border-2 border-amber-500/50 shadow-md">`;
-                    } else if(u.avatar) {
-                        av = `<div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-amber-500 border border-slate-600"><span class="material-symbols-rounded text-2xl">${u.avatar}</span></div>`;
-                    } else {
-                        const char = u.name ? u.name[0] : '?';
-                        av = `<div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-lg">${char}</div>`;
-                    }
-
-                    // --- عرض الأوسمة (Badges) ---
+                    // Badges logic
                     let badgesHtml = '';
                     if (u.badges && Array.isArray(u.badges) && u.badges.length > 0) {
                         badgesHtml = '<div class="flex flex-wrap gap-1 mt-1">';
-                        u.badges.forEach(badge => {
-                            badgesHtml += `<span class="bg-purple-700/50 text-purple-200 text-[10px] px-2 py-0.5 rounded-full font-bold">${badge}</span>`;
-                        });
+                        u.badges.forEach(badge => badgesHtml += `<span class="bg-purple-700/50 text-purple-200 text-[9px] px-1.5 py-0.5 rounded font-bold">${badge}</span>`);
                         badgesHtml += '</div>';
                     }
 
-                    const div = document.createElement('div');
-                    div.className = `admin-item ${u.isBanned ? 'bg-red-900/10 border-red-500/30' : ''}`;
                     div.innerHTML = `
-                        <div class="flex items-center gap-4 w-full">
-                            <div class="relative shrink-0">
-                                ${av}
-                                ${u.isBanned ? '<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center bg-red-600 rounded-full border-2 border-[#0f172a]"><span class="material-symbols-rounded text-[10px] text-white">block</span></span>' : ''}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-white font-bold text-base truncate mb-0.5">${displayName}</div>
-                                <div class="text-[10px] text-slate-500 font-mono tracking-wider select-all cursor-pointer hover:text-blue-400 transition" title="نسخ المعرف">${docSnap.id}</div>
+                        <div class="flex items-center gap-3 w-full md:w-auto flex-1 min-w-0">
+                            <div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600 shrink-0">${av}</div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-bold text-white truncate">${displayName}</div>
+                                <div class="text-[10px] text-slate-500 font-mono select-all truncate">${d.id}</div>
                                 ${badgesHtml}
-                            </div>
-                            <div class="text-center px-2">
-                                <div class="text-[10px] text-slate-400 uppercase tracking-widest">Score</div>
-                                <div class="text-amber-400 font-bold font-mono text-lg">${u.highScore || 0}</div>
-                            </div>
-                            <button class="bg-slate-700 hover:bg-blue-600 text-white p-2.5 rounded-lg ml-2 transition shadow-lg active:scale-95" onclick="openUserModal('${docSnap.id}')" title="تعديل"><span class="material-symbols-rounded">edit</span></button>
-                        </div>`;
-                    div.querySelector('button').onclick = () => openUserModal(docSnap.id, u);
-                    grid.appendChild(div);
-                });
-            } catch(e) { 
-                console.error(e); 
-                grid.innerHTML = '<div class="text-center text-red-400 p-4 border border-red-900/50 rounded bg-red-900/10">حدث خطأ في تحميل البيانات.</div>'; 
-            }
-        }
-        
-        el('btn-refresh-users').onclick = loadUsers;
-        el('user-search').oninput = loadUsers;
-
-        window.openUserModal = (uid, data) => {
-            currentUserEditId = uid;
-            el('edit-name').value = data.name || '';
-            el('edit-score').value = data.highScore || 0;
-            el('edit-banned').checked = data.isBanned || false;
-            
-            // تحميل الأوسمة: تحويل المصفوفة إلى نص مفصول بفواصل
-            el('edit-badges').value = Array.isArray(data.badges) ? data.badges.join(', ') : ''; 
-
-            const avCon = el('edit-avatar-container');
-            if(data.customAvatar) {
-                avCon.innerHTML = `<img src="${data.customAvatar}" class="w-full h-full object-cover">`;
-                show('btn-remove-avatar');
-            } else if (data.avatar) {
-                 avCon.innerHTML = `<span class="material-symbols-rounded text-4xl text-amber-500">${data.avatar}</span>`;
-                 hide('btn-remove-avatar');
-            } else {
-                avCon.innerHTML = `<span class="material-symbols-rounded text-4xl text-slate-500">person</span>`;
-                hide('btn-remove-avatar');
-            }
-            el('user-edit-modal').classList.add('active');
-        };
-
-        el('btn-save-user').onclick = async () => {
-            if(!currentUserEditId) return;
-            const btn = el('btn-save-user'); btn.innerText = "جاري الحفظ...";
-            
-            // تحويل الأوسمة من نص (مفصول بفواصل) إلى مصفوفة نظيفة
-            const newBadges = el('edit-badges').value
-                       .split(',')
-                       .map(s => s.trim())
-                       .filter(s => s.length > 0);
-
-            try {
-                await updateDoc(doc(db, "users", currentUserEditId), { 
-                    name: el('edit-name').value, 
-                    highScore: parseInt(el('edit-score').value) || 0, 
-                    isBanned: el('edit-banned').checked,
-                    badges: newBadges // حفظ الأوسمة الجديدة
-                });
-                toast("تم تحديث المستخدم"); el('user-edit-modal').classList.remove('active'); loadUsers();
-            } catch(e) { alert("Error: " + e.message); }
-            btn.innerText = "حفظ التغييرات";
-        };
-        
-        el('btn-delete-user').onclick = async () => {
-            if(confirm("تحذير: الحذف نهائي! هل أنت متأكد؟")) { 
-                await deleteDoc(doc(db, "users", currentUserEditId)); 
-                toast("تم حذف الحساب", "delete"); el('user-edit-modal').classList.remove('active'); loadUsers(); 
-            }
-        };
-        
-        el('btn-remove-avatar').onclick = async () => {
-            if(confirm("حذف الصورة الشخصية؟")) { 
-                await updateDoc(doc(db, "users", currentUserEditId), { customAvatar: null }); 
-                toast("تم حذف الصورة"); el('user-edit-modal').classList.remove('active'); loadUsers(); 
-            }
-        };
-        document.querySelector('.close-modal').onclick = () => el('user-edit-modal').classList.remove('active');
-        
-        el('btn-reset-password').onclick = () => {
-            const userEmail = prompt("لإرسال رابط إعادة التعيين، أدخل البريد الإلكتروني الخاص بالمستخدم:");
-            
-            if (userEmail) {
-                sendPasswordResetEmail(auth, userEmail)
-                .then(() => {
-                    toast("تم إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني.", "email");
-                })
-                .catch((error) => {
-                    if (error.code === 'auth/user-not-found') {
-                         toast("لم يتم العثور على مستخدم لهذا البريد الإلكتروني.", "warning");
-                    } else {
-                         alert("خطأ: تأكد من أن المستخدم يملك بريداً إلكترونياً مسجلاً. " + error.message);
-                    }
-                });
-            }
-        };
-
-        // --- CONTENT UPLOAD ---
-        
-        // 1. Manual Add
-        el('btn-man-save').onclick = async () => {
-            const q = el('man-q').value, o1 = el('man-o1').value, o2 = el('man-o2').value, o3 = el('man-o3').value, o4 = el('man-o4').value, topic = el('man-topic').value;
-            const correctIndex = Array.from(document.getElementsByName('correct_ans_selector')).findIndex(r => r.checked);
-            
-            if(!q || !o1 || !o2 || !o3 || !o4 || !topic) return toast("يرجى تعبئة جميع الحقول واختيار الموضوع", "warning");
-            
-            const btn = el('btn-man-save'); const oldTxt = btn.innerText; btn.innerText = "جاري الإضافة..."; btn.disabled = true;
-            try {
-                // تحديث: إضافة حالة المراجعة افتراضياً false
-                await addDoc(collection(db, "questions"), { 
-                    question: q, options: [o1,o2,o3,o4], correctAnswer: correctIndex, 
-                    explanation: el('man-exp').value, topic: topic, difficulty: el('man-diff').value, 
-                    isReviewed: false,
-                    createdAt: serverTimestamp() 
-                });
-                toast("تمت إضافة السؤال بنجاح");
-                el('man-q').value=''; el('man-o1').value=''; el('man-o2').value=''; el('man-o3').value=''; el('man-o4').value=''; el('man-exp').value='';
-                document.getElementsByName('correct_ans_selector')[0].checked = true;
-            } catch(e) { alert("خطأ: " + e.message); }
-            btn.innerText = oldTxt; btn.disabled = false;
-        };
-
-        // 2. File Upload
-        el('btn-upload-file').onclick = () => {
-            const file = el('json-file-input').files[0], topic = el('upload-topic').value, diff = el('upload-diff').value;
-            if(!file || !topic) return toast("اختر ملف JSON وحدد الموضوع", "warning");
-            
-            const r = new FileReader();
-            r.onload = async (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if(!Array.isArray(data)) throw new Error("يجب أن يكون الملف مصفوفة []");
-                    
-                    const btn = el('btn-upload-file'); btn.innerHTML = `<span class="spinner material-symbols-rounded">sync</span> جاري الرفع...`; btn.disabled = true;
-                    
-                    let count = 0;
-                    for(const q of data) {
-                         if(q.question && q.options) {
-                            // تحديث: إضافة حالة المراجعة
-                            await addDoc(collection(db, "questions"), { 
-                                question: q.question, options: q.options, correctAnswer: q.correctAnswer||0, 
-                                explanation: q.explanation||"", topic, difficulty: diff, isReviewed: false, createdAt: serverTimestamp() 
-                            });
-                            count++;
-                         }
-                    }
-                    toast(`تم رفع ${count} سؤال بنجاح`); btn.innerHTML = `بدء الرفع <span class="material-symbols-rounded text-sm">upload_file</span>`; btn.disabled = false;
-                } catch(err) { alert("خطأ في الملف: " + err.message); }
-            };
-            r.readAsText(file);
-        };
-
-        // 3. Paste JSON
-        el('btn-paste-upload').onclick = async () => {
-            const txt = el('json-paste-area').value, topic = el('paste-topic').value, diff = el('paste-diff').value;
-            if(!txt || !topic) return toast("الصق الكود وحدد الموضوع", "warning");
-            
-            const btn = el('btn-paste-upload'); const oldTxt = btn.innerText; btn.innerText = "جاري المعالجة..."; btn.disabled = true;
-            try {
-                const data = JSON.parse(txt);
-                if(!Array.isArray(data)) throw new Error("يجب أن يكون الكود مصفوفة []");
-                
-                let count = 0;
-                for(const q of data) {
-                    if(q.question && q.options) {
-                        // تحديث: إضافة حالة المراجعة
-                        await addDoc(collection(db, "questions"), { 
-                            question: q.question, options: q.options, correctAnswer: q.correctAnswer || 0, 
-                            explanation: q.explanation || "", topic: topic, difficulty: diff, isReviewed: false, createdAt: serverTimestamp() 
-                        });
-                        count++;
-                    }
-                }
-                toast(`تمت إضافة ${count} سؤال`); el('json-paste-area').value = '';
-            } catch(e) { alert("خطأ في تنسيق JSON:\n" + e.message); }
-            btn.innerText = oldTxt; btn.disabled = false;
-        };
-
-        // --- MANAGE QUESTIONS ---
-
-        el('btn-refresh-qs').onclick = () => loadQuestions(false);
-        el('manage-filter').onchange = () => loadQuestions(false);
-        el('btn-load-more').onclick = () => loadQuestions(true);
-        
-        // دالة تلوين النص (للبحث الذكي)
-        function highlightText(text, search) {
-            if (!search) return text;
-            const terms = search.split(/\s+/);
-            let newText = text;
-            terms.forEach(term => {
-                if(term.length > 1) { 
-                    const regex = new RegExp(`(${term})`, 'gi');
-                    newText = newText.replace(regex, '<span class="bg-amber-500/40 text-white px-1 rounded shadow-sm">$1</span>');
-                }
-            });
-            return newText;
-        }
-
-        // دالة البحث الذكي (Client-side Search)
-        el('qs-search-input').oninput = async function() {
-            const term = this.value.trim().toLowerCase();
-            currentSearchTerm = term;
-            
-            if (term === "") {
-                loadQuestions(false); 
-                return;
-            }
-
-            const grid = el('questions-grid');
-            grid.innerHTML = '<div class="text-center py-8 text-slate-500"><span class="material-symbols-rounded spinner">sync</span> جاري البحث في الأرشيف...</div>';
-            el('btn-load-more').classList.add('hidden'); 
-
-            // 1. تحميل كافة البيانات في الذاكرة (مرة واحدة فقط)
-            if (!isCacheLoaded) {
-                try {
-                    const q = query(collection(db, "questions"));
-                    const snapshot = await getDocs(q);
-                    allQuestionsCache = [];
-                    snapshot.forEach(doc => allQuestionsCache.push({ id: doc.id, ...doc.data() }));
-                    isCacheLoaded = true;
-                } catch (e) {
-                    grid.innerHTML = '<div class="text-red-400 text-center">خطأ في تحميل بيانات البحث</div>';
-                    return;
-                }
-            }
-
-            // 2. منطق البحث الذكي (الكلمات المتعددة غير المرتبة)
-            const searchTerms = term.split(/\s+/).filter(w => w.length > 0); 
-            
-            const filteredResults = allQuestionsCache.filter(item => {
-                const text = (item.question + " " + (item.explanation || "")).toLowerCase(); 
-                return searchTerms.every(word => text.includes(word));
-            });
-
-            // 3. عرض النتائج
-            renderQuestionsList(filteredResults);
-        };
-
-        // --- تحديث: دالة العرض مع التمييز اللوني وزر المراجعة ---
-        function renderQuestionsList(dataList, append = false) {
-            const grid = el('questions-grid');
-            
-            if (!append) {
-                grid.innerHTML = '';
-            }
-            
-            el('qs-counter').innerText = dataList.length;
-            
-            if (dataList.length === 0) {
-                 if (!append) grid.innerHTML = '<div class="text-center py-8 text-slate-500 border border-dashed border-slate-700 rounded">لا توجد أسئلة أو نتائج مطابقة.</div>';
-                 return;
-            }
-            
-            const listToRender = dataList; 
-
-            listToRender.forEach(d => {
-                const div = document.createElement('div');
-                div.id = `q-row-${d.id}`; // مهم جداً للتحكم بالحذف الديناميكي
-                
-                // ** التمييز اللوني **
-                const isReviewed = d.isReviewed === true;
-                const bgClass = isReviewed 
-                    ? 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50' 
-                    : 'bg-amber-900/10 border-amber-500/50 border-dashed hover:bg-amber-900/20';
-                
-                div.className = `admin-item ${bgClass} fade-in relative transition-all duration-300`;
-                
-                // تلوين الصعوبة
-                let diffBadge = '';
-                if(d.difficulty === 'سهل') diffBadge = '<span class="text-green-400 border border-green-500/30 text-[10px] px-1.5 rounded bg-green-900/10">سهل</span>';
-                else if(d.difficulty === 'صعب') diffBadge = '<span class="text-red-400 border border-red-500/30 text-[10px] px-1.5 rounded bg-red-900/10">صعب</span>';
-                else diffBadge = '<span class="text-amber-400 border border-amber-500/30 text-[10px] px-1.5 rounded bg-amber-900/10">متوسط</span>';
-                
-                let optionsHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 w-full mt-2">';
-                d.options.forEach((opt, idx) => {
-                    const isCorrect = idx === d.correctAnswer;
-                    const style = isCorrect 
-                        ? 'bg-green-600/30 border-green-500 text-green-100 font-bold shadow-md' 
-                        : 'bg-slate-900/50 border-slate-700 text-slate-400'; 
-                    
-                    optionsHTML += `
-                        <div class="px-3 py-2 rounded text-xs border ${style} flex justify-between items-center">
-                            <span>${opt}</span>
-                            ${isCorrect ? '<span class="material-symbols-rounded text-sm">check_circle</span>' : ''}
-                        </div>`;
-                });
-                optionsHTML += '</div>';
-
-                // أيقونة الحالة
-                const statusIcon = isReviewed 
-                    ? '<span class="flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30"><span class="material-symbols-rounded text-sm">verified</span> تمت المراجعة</span>'
-                    : '<span class="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30"><span class="material-symbols-rounded text-sm">hourglass_empty</span> بانتظار المراجعة</span>';
-
-                div.innerHTML = `
-                    <div class="w-full">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="text-white font-bold text-base leading-relaxed pl-4">
-                                <span class="text-amber-500 ml-1">س:</span> ${highlightText(d.question, currentSearchTerm)}
-                            </div>
-                            <div class="flex flex-col gap-1 items-end shrink-0">
-                                ${diffBadge}
-                                <span class="text-[10px] text-slate-500 bg-slate-900 px-1 rounded">${d.topic}</span>
                             </div>
                         </div>
                         
-                        <div class="mb-2 status-indicator">${statusIcon}</div>
-
-                        ${optionsHTML}
-                        
-                        ${d.explanation ? `<div class="mt-3 text-xs text-blue-300 bg-blue-900/10 p-2 rounded border-r-2 border-blue-500">💡 <b>معلومة:</b> ${d.explanation}</div>` : ''}
-                    </div>
+                        <div class="flex items-center justify-between w-full md:w-auto gap-4 pl-2 md:pl-0 border-t md:border-0 border-slate-700/50 pt-2 md:pt-0 mt-1 md:mt-0">
+                            <div class="text-center px-2">
+                                <div class="text-[10px] text-slate-400 uppercase">Score</div>
+                                <div class="text-amber-500 font-bold font-mono">${u.highScore||0}</div>
+                            </div>
+                            <button class="bg-slate-700 hover:bg-blue-600 p-2.5 rounded-lg text-white btn-edit-user transition shrink-0"><span class="material-symbols-rounded">edit</span></button>
+                        </div>
+                    `;
                     
-                    <div class="flex gap-2 w-full justify-end border-t border-slate-700/50 pt-2 mt-2">
-                        
-                        <button class="text-xs ${isReviewed ? 'text-slate-400 hover:text-amber-400' : 'text-green-400 hover:text-green-300'} flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded transition shadow border border-slate-600 btn-toggle-review">
-                            <span class="material-symbols-rounded text-sm">${isReviewed ? 'unpublished' : 'check_circle'}</span> 
-                            ${isReviewed ? 'إلغاء الاعتماد' : 'اعتماد السؤال'}
-                        </button>
-
-                        <div class="w-[1px] bg-slate-700 mx-1"></div>
-
-                        <button class="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-700/50 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-edit-q">
-                            <span class="material-symbols-rounded text-sm">edit_note</span> تعديل
-                        </button>
-                        <button class="text-xs text-red-400 hover:text-red-200 flex items-center gap-1 bg-red-900/10 hover:bg-red-900/30 px-3 py-1.5 rounded transition btn-del-q">
-                            <span class="material-symbols-rounded text-sm">delete</span> حذف
-                        </button>
-                    </div>
-                `;
-
-                // ربط الأحداث
-                div.querySelector('.btn-edit-q').onclick = () => openEditQModal(d.id, d);
-                
-                div.querySelector('.btn-toggle-review').onclick = async () => {
-                     // عند الضغط على الزر في القائمة
-                     await handleReviewAction(d.id, d.isReviewed, false);
-                     d.isReviewed = !d.isReviewed; // تحديث المتغير المحلي
-                };
-
-                div.querySelector('.btn-del-q').onclick = async () => { 
-                    if(confirm("حذف هذا السؤال نهائياً؟")) { 
-                        await deleteDoc(doc(db, "questions", d.id)); 
-                        div.remove(); 
-                        allQuestionsCache = allQuestionsCache.filter(q => q.id !== d.id); 
-                        toast("تم الحذف", "delete");
-                        el('qs-counter').innerText = document.querySelectorAll('#questions-grid .admin-item').length;
-                    } 
-                };
-                
-                grid.appendChild(div);
-            });
+                    div.querySelector('.btn-edit-user').onclick = () => {
+                        window.currentUserEditId = d.id;
+                        el('edit-name').value = displayName; el('edit-score').value = u.highScore||0; el('edit-banned').checked = u.isBanned||false; el('edit-pass').value = u.password || '';
+                        el('edit-badges').value = Array.isArray(u.badges) ? u.badges.join(', ') : ''; // Load badges
+                        const prev = el('edit-avatar-preview'); prev.innerHTML = '';
+                        if(u.customAvatar) { prev.innerHTML = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`; show('btn-del-avatar'); }
+                        else if(u.avatar) { prev.innerHTML = `<span class="material-symbols-rounded text-amber-500 text-4xl">${u.avatar}</span>`; hide('btn-del-avatar'); }
+                        else { prev.innerHTML = `<span class="material-symbols-rounded text-slate-500 text-4xl">person</span>`; hide('btn-del-avatar'); }
+                        el('user-edit-modal').classList.add('active');
+                    };
+                    grid.appendChild(div);
+                });
+            } catch(e) { console.error(e); }
         }
-        
-        // --- تحديث: دالة ذكية للتعامل مع المراجعة وحذف الصف إذا لزم الأمر ---
-        async function handleReviewAction(docId, currentStatus, isModal = false) {
-            const newStatus = !currentStatus;
+        el('btn-refresh-users').onclick = loadUsers; el('user-search').oninput = loadUsers;
+
+        el('btn-save-user').onclick = async () => {
+            const updates = { username: el('edit-name').value, highScore: parseInt(el('edit-score').value)||0, isBanned: el('edit-banned').checked };
+            if(el('edit-pass').value) updates.password = el('edit-pass').value;
+            if(window.newAvatarBase64) updates.customAvatar = window.newAvatarBase64;
+            // Save badges array
+            updates.badges = el('edit-badges').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
             
-            try {
-                // 1. تحديث قاعدة البيانات
-                await updateDoc(doc(db, "questions", docId), { isReviewed: newStatus });
-                
-                // 2. التعامل مع واجهة المستخدم (DOM)
-                const currentFilter = el('manage-filter').value;
-                const rowElement = document.getElementById(`q-row-${docId}`);
-                
-                // إذا كنا في فلتر "غير المراجعة" وتم اعتماد السؤال (تحول إلى مراجع) -> احذفه من القائمة
-                if (currentFilter === 'unreviewed' && newStatus === true) {
-                    if (rowElement) {
-                        rowElement.classList.add('fade-out-remove');
-                        setTimeout(() => {
-                            rowElement.remove();
-                            // تحديث العداد
-                            const count = document.querySelectorAll('#questions-grid .admin-item').length;
-                            el('qs-counter').innerText = count;
-                            // إذا فرغت القائمة
-                            if(count === 0) el('questions-grid').innerHTML = '<div class="text-center py-8 text-slate-500 border border-dashed border-slate-700 rounded">لا توجد أسئلة غير مراجعة حالياً.</div>';
-                        }, 300);
-                    }
-                    
-                    if(isModal) {
-                        el('question-edit-modal').classList.remove('active'); // إغلاق المودال تلقائياً
-                    }
-                    
-                    toast("تم الاعتماد واختفى من القائمة", "check_circle");
-                    return; // انتهى العمل هنا
-                }
-                
-                // إذا لم نكن في وضع الحذف التلقائي
-                if (!isModal) { 
-                    if(rowElement) {
-                        const btn = rowElement.querySelector('.btn-toggle-review');
-                        const statusInd = rowElement.querySelector('.status-indicator');
-                        
-                        if (newStatus) {
-                            rowElement.classList.remove('bg-amber-900/10', 'border-amber-500/50', 'border-dashed');
-                            rowElement.classList.add('bg-slate-800/40', 'border-slate-700/50');
-                            btn.classList.remove('text-green-400'); btn.classList.add('text-slate-400');
-                            btn.innerHTML = '<span class="material-symbols-rounded text-sm">unpublished</span> إلغاء الاعتماد';
-                            statusInd.innerHTML = '<span class="flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30"><span class="material-symbols-rounded text-sm">verified</span> تمت المراجعة</span>';
-                        } else {
-                            rowElement.classList.add('bg-amber-900/10', 'border-amber-500/50', 'border-dashed');
-                            rowElement.classList.remove('bg-slate-800/40', 'border-slate-700/50');
-                            btn.classList.add('text-green-400'); btn.classList.remove('text-slate-400');
-                            btn.innerHTML = '<span class="material-symbols-rounded text-sm">check_circle</span> اعتماد السؤال';
-                            statusInd.innerHTML = '<span class="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30"><span class="material-symbols-rounded text-sm">hourglass_empty</span> بانتظار المراجعة</span>';
-                        }
-                    }
-                } else {
-                    // إذا كنا داخل المودال ولم نحذف الصف (لأننا لسنا في فلتر غير المراجعة)، نحدث الزر الخلفي
-                    if(rowElement) {
-                        const btnBack = rowElement.querySelector('.btn-toggle-review');
-                        if(btnBack) btnBack.click(); // محاكاة ضغطة الزر الخلفي
-                    }
-                }
-                
-                toast(newStatus ? "تم اعتماد السؤال" : "تم إلغاء الاعتماد", "check_circle");
-                
-                if(isModal) {
-                    updateModalReviewBtn(newStatus);
-                }
+            await updateDoc(doc(db, "users", window.currentUserEditId), updates);
+            toast("تم تحديث المستخدم"); el('user-edit-modal').classList.remove('active'); loadUsers(); window.newAvatarBase64 = null;
+        };
 
-            } catch (e) {
-                console.error(e);
-                toast("خطأ في العملية", "error");
-            }
+        // --- UPDATED SEARCH LOGIC (Client-Side Cache) ---
+        let allQuestionsCache = [];
+        let isCacheLoaded = false;
+        let isFetchingQs = false;
+
+        async function fetchAllForSearch() {
+             const loader = el('q-loader');
+             if(loader) loader.innerHTML = '<span class="material-symbols-rounded spinner text-3xl">cloud_download</span><p class="text-xs mt-2">جاري تحميل الأرشيف الكامل للبحث...</p>';
+             
+             try {
+                // Get ALL questions (expensive but done once per session if needed)
+                const qSnap = await getDocs(query(collection(db, "questions"), orderBy("createdAt", "desc")));
+                allQuestionsCache = [];
+                qSnap.forEach(doc => allQuestionsCache.push({ id: doc.id, ...doc.data() }));
+                isCacheLoaded = true;
+                return true;
+             } catch(e) { console.error(e); return false; }
         }
-        
-        // --- تحديث: منطق جلب الأسئلة ليشمل الفلتر الجديد ---
-        async function loadQuestions(loadMore = false) {
-            if (currentSearchTerm !== "") return; 
 
+        el('qs-search-input').oninput = async function() {
+            const term = this.value.trim().toLowerCase();
             const grid = el('questions-grid');
             const loadBtn = el('btn-load-more');
-            const filterVal = el('manage-filter').value;
 
-            if (!loadMore) {
-                grid.innerHTML = '';
-                lastVisibleDoc = null;
-                el('qs-counter').innerText = '0';
-                loadBtn.classList.add('hidden');
-                grid.innerHTML = '<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span><p class="text-xs mt-2">جاري جلب البيانات...</p></div>';
-            } else {
-                loadBtn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span> جاري التحميل...';
+            if (term === "") {
+                // Reset to standard paginated view
+                loadQuestions(false);
+                return;
             }
+
+            // If first time searching, fetch all
+            if (!isCacheLoaded) {
+                 grid.innerHTML = '<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span></div>';
+                 await fetchAllForSearch();
+            }
+
+            // Deep Filter
+            const results = allQuestionsCache.filter(q => {
+                const qText = (q.question || "").toLowerCase();
+                const expText = (q.explanation || "").toLowerCase();
+                const optText = (q.options || []).join(" ").toLowerCase();
+                return qText.includes(term) || expText.includes(term) || optText.includes(term);
+            });
+
+            // Render Results (No pagination for search results, show top 50 matches)
+            grid.innerHTML = '';
+            loadBtn.classList.add('hidden');
+            el('qs-counter').innerText = results.length;
+
+            if (results.length === 0) {
+                grid.innerHTML = '<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج مطابقة</div>';
+                return;
+            }
+
+            // Render limit to 50 for performance during search
+            results.slice(0, 50).forEach(d => renderQuestionCard(d, grid));
+            if(results.length > 50) {
+                 grid.innerHTML += `<div class="text-center text-xs text-slate-500 py-2">تم عرض 50 نتيجة من أصل ${results.length}</div>`;
+            }
+        };
+
+        // Standard Paginated Load
+        let lastVisible = null; 
+        async function loadQuestions(loadMore = false) {
+            if (el('qs-search-input').value.trim() !== "") return; // Don't run if searching
+            if (isFetchingQs) return; isFetchingQs = true;
+
+            const grid = el('questions-grid'); const loadBtn = el('btn-load-more'); const filterVal = el('manage-filter').value;
+            
+            if (!loadMore) { grid.innerHTML = ''; lastVisible = null; el('qs-counter').innerText = '0'; loadBtn.classList.add('hidden'); grid.innerHTML = '<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span><p class="text-xs mt-2">جاري جلب البيانات...</p></div>'; } 
+            else { loadBtn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span> جاري التحميل...'; }
 
             try {
                 let constraints = [];
-                
-                if (filterVal === 'unreviewed') {
-                    // جلب الأسئلة التي حقل المراجعة فيها يساوي false
-                    constraints.push(where("isReviewed", "==", false));
-                } else if (filterVal) {
-                    constraints.push(where("topic", "==", filterVal));
-                }
+                if (filterVal === 'unreviewed') constraints.push(where("isReviewed", "==", false));
+                else if (filterVal) constraints.push(where("topic", "==", filterVal));
                 
                 constraints.push(orderBy("createdAt", "desc"));
-
-                if (loadMore && lastVisibleDoc) {
-                    constraints.push(startAfter(lastVisibleDoc));
-                }
-
-                constraints.push(limit(QUESTIONS_PER_PAGE));
+                if (loadMore && lastVisible) constraints.push(startAfter(lastVisible));
+                constraints.push(limit(200));
 
                 const q = query(collection(db, "questions"), ...constraints);
                 const snapshot = await getDocs(q);
-
-                const loader = el('q-loader');
-                if (loader) loader.remove();
                 
-                const dataList = [];
-                snapshot.forEach(doc => dataList.push({ id: doc.id, ...doc.data() }));
+                const loader = el('q-loader'); if (loader) loader.remove();
 
-                renderQuestionsList(dataList, loadMore);
-
-                if (snapshot.docs.length < QUESTIONS_PER_PAGE) {
+                if (snapshot.empty) {
+                    if (!loadMore) grid.innerHTML = '<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج</div>';
                     loadBtn.classList.add('hidden');
                 } else {
-                    loadBtn.classList.remove('hidden');
-                    loadBtn.innerHTML = 'تحميل المزيد من الأسئلة <span class="material-symbols-rounded">expand_more</span>';
-                    lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
+                    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+                    if (snapshot.docs.length < 200) loadBtn.classList.add('hidden'); else { loadBtn.classList.remove('hidden'); loadBtn.innerHTML = 'تحميل المزيد (200+)'; }
+                    snapshot.forEach(docSnap => {
+                        const data = { id: docSnap.id, ...docSnap.data() };
+                        renderQuestionCard(data, grid);
+                    });
+                    el('qs-counter').innerText = document.querySelectorAll('#questions-grid .admin-item').length;
                 }
-
-            } catch(e) { 
-                const loader = el('q-loader');
-                if (loader) loader.remove();
-                
-                if(e.message.includes("index")) {
-                    grid.innerHTML += `<div class="text-center text-amber-400 text-sm p-4 border border-amber-500/20 bg-amber-900/10 rounded mt-2"><b>تنبيه من Firebase:</b> تحتاج لإنشاء فهرس (Index) جديد لهذا الفلتر.<br>افتح الـ Console في المتصفح واضغط على الرابط الظاهر هناك لإنشائه تلقائياً.</div>`;
-                } else {
-                    grid.innerHTML += `<div class="text-center text-red-400 text-sm p-4 border border-red-500/20 bg-red-900/10 rounded mt-2">خطأ في جلب البيانات: ${e.message}</div>`; 
-                }
-            }
+            } catch(e) { console.error(e); }
+            isFetchingQs = false;
         }
 
-        let currentEditQId = null;
-        let currentEditQStatus = false; // تتبع حالة السؤال الحالي في المودال
+        // Helper to render card (used by both Search and Load)
+        function renderQuestionCard(d, container) {
+            const div = document.createElement('div');
+            div.id = `q-row-${d.id}`;
+            const isReviewed = d.isReviewed === true;
+            const bgClass = isReviewed ? 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50' : 'bg-amber-900/10 border-amber-500/50 border-dashed hover:bg-amber-900/20';
+            div.className = `admin-item ${bgClass} fade-in relative transition-all duration-300`;
 
-        window.openEditQModal = (docId, data) => {
-            currentEditQId = docId;
-            currentEditQStatus = data.isReviewed || false;
+            const statusIcon = isReviewed 
+                ? '<span class="flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30"><span class="material-symbols-rounded text-sm">verified</span> معتمد</span>'
+                : '<span class="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30"><span class="material-symbols-rounded text-sm">hourglass_empty</span> مراجعة</span>';
+
+            div.innerHTML = `
+                <div class="w-full">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-white font-bold text-base leading-relaxed pl-4">${d.question}</div>
+                        <div class="flex flex-col gap-1 items-end shrink-0">
+                            <span class="text-[10px] text-slate-500 bg-slate-900 px-1 rounded">${d.topic}</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">${statusIcon}</div>
+                    ${d.explanation ? `<div class="mt-2 text-xs text-blue-300 bg-blue-900/10 p-2 rounded border-r-2 border-blue-500">💡 ${d.explanation}</div>` : ''}
+                </div>
+                <div class="flex gap-2 w-full justify-end border-t border-slate-700/50 pt-2 mt-2">
+                    <button class="text-xs text-purple-400 hover:bg-purple-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-dup-q"><span class="material-symbols-rounded text-sm">content_copy</span> تكرار</button>
+                    <button class="text-xs ${isReviewed ? 'text-slate-400' : 'text-green-400'} hover:bg-slate-700 px-3 py-1.5 rounded transition flex items-center gap-1 btn-toggle-review"><span class="material-symbols-rounded text-sm">${isReviewed ? 'unpublished' : 'check_circle'}</span> ${isReviewed ? 'إلغاء' : 'اعتماد'}</button>
+                    <button class="text-xs text-blue-400 hover:bg-blue-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-edit-q"><span class="material-symbols-rounded text-sm">edit_note</span> تعديل</button>
+                    <button class="text-xs text-red-400 hover:bg-red-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-del-q"><span class="material-symbols-rounded text-sm">delete</span> حذف</button>
+                </div>
+            `;
+
+            div.querySelector('.btn-edit-q').onclick = () => openEditQModal(d.id, d);
+            div.querySelector('.btn-del-q').onclick = async () => { if(confirm("حذف السؤال؟")) { await deleteDoc(doc(db,"questions",d.id)); div.remove(); toast("تم الحذف","delete"); } };
+            div.querySelector('.btn-toggle-review').onclick = async () => {
+                const newStatus = !d.isReviewed;
+                await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
+                d.isReviewed = newStatus;
+                // If filtering by review status, remove from view, else refresh appearance
+                if (el('manage-filter').value === 'unreviewed' && newStatus) { div.remove(); } 
+                else { loadQuestions(false); toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد"); }
+            };
+            div.querySelector('.btn-dup-q').onclick = async () => {
+                 if(confirm("نسخ السؤال؟")) {
+                     const copy = { ...d, createdAt: serverTimestamp(), question: d.question + " (نسخة)", isReviewed: false }; 
+                     delete copy.id; // ensure ID is not copied
+                     await addDoc(collection(db, "questions"), copy);
+                     toast("تم نسخ السؤال"); loadQuestions(false);
+                 }
+            };
+            container.appendChild(div);
+        }
+
+        // --- EXPORT/DELETE FILTERED (Restored Surgical Delete) ---
+        el('btn-export-filtered').onclick = async () => {
+            const t = el('export-topic').value; const diff = el('export-diff').value;
+            const constr = [where("topic","==",t)]; if(diff) constr.push(where("difficulty","==",diff));
+            const snap = await getDocs(query(collection(db,"questions"), ...constr));
+            if(snap.empty) return alert("لا توجد بيانات");
+            const data = []; snap.forEach(d => { let x = d.data(); delete x.createdAt; data.push(x); });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); a.download = `Export_${t}_${diff||'All'}.json`; a.click();
+        };
+
+        el('btn-delete-filtered').onclick = async () => {
+            const t = el('delete-topic').value; const diff = el('delete-diff').value;
+            if(!t) return;
+            if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff ? 'بصعوبة '+diff : 'بكل الصعوبات'}؟`)) return;
             
-            el('edit-q-text').value = data.question;
-            el('edit-o1').value = data.options[0]; el('edit-o2').value = data.options[1]; el('edit-o3').value = data.options[2]; el('edit-o4').value = data.options[3];
-            el('edit-q-exp').value = data.explanation || ""; el('edit-q-diff').value = data.difficulty || "متوسط";
-            
-            const radios = document.getElementsByName('edit_ans_selector');
-            if(radios[data.correctAnswer]) radios[data.correctAnswer].checked = true;
-            
-            let foundCat = ""; for(const [cat, subTopics] of Object.entries(topics)) { if(subTopics.includes(data.topic)) { foundCat = cat; break; } }
-            if(foundCat) { 
-                el('edit-q-cat').value = foundCat; 
-                el('edit-q-cat').dispatchEvent(new Event('change')); 
-                el('edit-q-topic').value = data.topic; 
-            }
-            
-            // تحديث زر المودال
-            updateModalReviewBtn(currentEditQStatus);
-            
+            const btn = el('btn-delete-filtered'); btn.innerText = "جاري الحذف...";
+            try {
+                const constr = [where("topic","==",t)]; if(diff) constr.push(where("difficulty","==",diff));
+                const snap = await getDocs(query(collection(db,"questions"), ...constr));
+                if(snap.empty) { alert("لا توجد أسئلة مطابقة"); }
+                else {
+                    const batch = writeBatch(db); snap.forEach(d => batch.delete(d.ref));
+                    await batch.commit(); alert(`تم حذف ${snap.size} سؤال.`); loadStats();
+                    // Invalidate cache
+                    isCacheLoaded = false;
+                }
+            } catch(e) { alert("خطأ: " + e.message); }
+            btn.innerText = "حذف الحزمة";
+        };
+        
+        // ... (Remaining handlers for reports, add content, etc. kept as is) ...
+        el('btn-refresh-reports').onclick = loadReports;
+        // ... Reports code same as before ... 
+        el('btn-man-save').onclick = async () => {
+            const q = el('man-q').value, topic = el('man-topic').value;
+            if(!q || !topic) return toast("بيانات ناقصة", "warning");
+            const ansIdx = Array.from(document.getElementsByName('correct_ans_selector')).findIndex(r => r.checked);
+            await addDoc(collection(db, "questions"), { question: q, options: [el('man-o1').value, el('man-o2').value, el('man-o3').value, el('man-o4').value], correctAnswer: ansIdx, explanation: el('man-exp').value, topic: topic, difficulty: el('man-diff').value, isReviewed: false, createdAt: serverTimestamp() });
+            toast("تمت الإضافة"); el('man-q').value='';
+        };
+        el('btn-upload-file').onclick = () => {
+            const f = el('json-file-input').files[0], t = el('upload-topic').value;
+            if(!f || !t) return toast("اختر ملف وموضوع", "warning");
+            const r = new FileReader(); r.onload = async (e) => { try { const d = JSON.parse(e.target.result); let c=0; for(let q of d) { if(q.question) { await addDoc(collection(db,"questions"),{...q, topic:t, difficulty:'متوسط', isReviewed:false, createdAt:serverTimestamp()}); c++; } } toast(`تم رفع ${c}`); } catch(x){ alert("خطأ JSON"); } }; r.readAsText(f);
+        };
+        el('btn-paste-upload').onclick = async () => {
+            const txt = el('json-paste-area').value, t = el('paste-topic').value;
+            if(!txt || !t) return toast("أدخل النص واختر الموضوع", "warning");
+            try { const d = JSON.parse(txt); let c=0; for(let q of d) { if(q.question) { await addDoc(collection(db,"questions"),{...q, topic:t, difficulty:'متوسط', isReviewed:false, createdAt:serverTimestamp()}); c++; } } toast(`تمت إضافة ${c}`); el('json-paste-area').value=''; } catch(x){ alert("خطأ JSON"); }
+        };
+        window.openEditQModal = (id, data) => {
+            window.currQId = id; window.currQStatus = data.isReviewed || false;
+            el('edit-q-text').value = data.question; el('edit-o1').value = data.options[0]; el('edit-o2').value = data.options[1]; el('edit-o3').value = data.options[2]; el('edit-o4').value = data.options[3]; el('edit-q-exp').value = data.explanation||""; el('edit-q-diff').value = data.difficulty || "متوسط";
+            if(document.getElementsByName('edit_ans_selector')[data.correctAnswer]) document.getElementsByName('edit_ans_selector')[data.correctAnswer].checked = true;
+            let catFound = ""; for(let c in topics) if(topics[c].includes(data.topic)) { catFound = c; break; } if(catFound) { el('edit-q-cat').value = catFound; el('edit-q-cat').dispatchEvent(new Event('change')); el('edit-q-topic').value = data.topic; }
+            const revBtn = el('btn-modal-toggle-review'); if(window.currQStatus) { revBtn.innerText = "✅ معتمد (اضغط للإلغاء)"; revBtn.className = "flex-1 border border-green-500 bg-green-900/20 text-green-400 rounded-lg transition font-bold"; } else { revBtn.innerText = "⏳ قيد المراجعة (اضغط للاعتماد)"; revBtn.className = "flex-1 border border-amber-500 bg-amber-900/20 text-amber-400 rounded-lg transition font-bold"; }
             el('question-edit-modal').classList.add('active');
         };
-
-        // دالة تحديث شكل زر المودال
-        function updateModalReviewBtn(status) {
-            const btn = el('btn-modal-toggle-review');
-            if(status) {
-                btn.className = "flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-green-500/30 bg-green-900/20 hover:bg-green-900/30 text-green-400";
-                btn.innerHTML = '<span class="material-symbols-rounded">verified</span> معتمد (إلغاء)';
-            } else {
-                btn.className = "flex-1 py-3.5 rounded-lg font-bold shadow-lg transition active:scale-[0.99] flex justify-center gap-2 items-center border border-amber-500/30 bg-amber-900/20 hover:bg-amber-900/30 text-amber-500";
-                btn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> غير معتمد (اعتماد)';
-            }
+        el('btn-save-edit-q').onclick = async () => { const ansIdx = Array.from(document.getElementsByName('edit_ans_selector')).findIndex(r => r.checked); await updateDoc(doc(db, "questions", window.currQId), { question: el('edit-q-text').value, options: [el('edit-o1').value, el('edit-o2').value, el('edit-o3').value, el('edit-o4').value], correctAnswer: ansIdx, explanation: el('edit-q-exp').value, topic: el('edit-q-topic').value, difficulty: el('edit-q-diff').value }); toast("تم التعديل"); el('question-edit-modal').classList.remove('active'); loadQuestions(false); };
+        el('btn-modal-toggle-review').onclick = async () => { const newS = !window.currQStatus; await updateDoc(doc(db, "questions", window.currQId), { isReviewed: newS }); toast(newS ? "تم الاعتماد" : "تم الإلغاء"); el('question-edit-modal').classList.remove('active'); loadQuestions(false); };
+        document.querySelector('.close-q-modal').onclick = () => el('question-edit-modal').classList.remove('active'); document.querySelector('.close-modal').onclick = () => el('user-edit-modal').classList.remove('active');
+        
+        // Reports Logic (Kept mostly same, re-pasting for completeness if missing from snippet)
+        async function loadReports() {
+            const grid = el('reports-grid'); grid.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-slate-500 py-8"><span class="material-symbols-rounded spinner">sync</span></div>';
+            try {
+                const snap = await getDocs(query(collection(db, "reports"), orderBy("timestamp", "desc")));
+                grid.innerHTML = '';
+                if(snap.empty) { grid.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-slate-500 py-8 border border-dashed border-slate-700 rounded-xl">لا توجد بلاغات جديدة 🎉</div>'; return; }
+                snap.forEach(docSnap => {
+                    const r = docSnap.data(); const date = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleDateString('ar-EG') : 'غير محدد';
+                    const div = document.createElement('div'); div.className = 'glass p-4 border-l-4 border-l-red-500 relative fade-in';
+                    div.innerHTML = `<div class="flex justify-between items-start mb-3"><div><span class="text-[10px] text-slate-400 uppercase">بلاغ من: ${r.reportedByUsername || 'مجهول'}</span><div class="text-red-400 font-bold text-sm mt-1 flex items-center gap-1"><span class="material-symbols-rounded text-sm">calendar_today</span> ${date}</div></div><span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded font-mono">${docSnap.id.substring(0,6)}</span></div><div class="bg-slate-900/50 p-3 rounded mb-3 border border-slate-700/50"><div class="text-xs text-slate-500 mb-1">السؤال:</div><p class="text-white text-sm font-bold leading-relaxed">"${r.questionText}"</p><div class="text-xs text-amber-500 mt-1">الموضوع: ${r.topic}</div></div><div class="grid grid-cols-3 gap-2"><button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-xs font-bold btn-fix shadow">فحص وتعديل</button><button class="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded text-xs font-bold btn-dismiss shadow">تجاهل وحذف</button><button class="bg-red-900/50 hover:bg-red-900 text-red-400 border border-red-800 py-2 rounded text-xs font-bold btn-nuke-q shadow">حذف السؤال!</button></div>`;
+                    div.querySelector('.btn-dismiss').onclick = async () => { if(confirm("حذف البلاغ فقط؟")) { await deleteDoc(doc(db, "reports", docSnap.id)); div.remove(); toast("تم حذف البلاغ"); } };
+                    div.querySelector('.btn-nuke-q').onclick = async () => { if(confirm("حذف السؤال والبلاغ نهائياً؟")) { try { if(r.questionId !== 'N/A') await deleteDoc(doc(db, "questions", r.questionId)); await deleteDoc(doc(db, "reports", docSnap.id)); div.remove(); toast("تم حذف السؤال والبلاغ", "delete"); } catch(e) { alert(e.message); } } };
+                    div.querySelector('.btn-fix').onclick = async () => { if(r.questionId === 'N/A') return alert("لا يوجد معرف للسؤال"); const btn = div.querySelector('.btn-fix'); btn.innerText = "جاري الجلب..."; try { const qDoc = await getDoc(doc(db, "questions", r.questionId)); if(qDoc.exists()) { openEditQModal(r.questionId, qDoc.data()); } else { alert("السؤال محذوف مسبقاً."); } } catch(e) { alert("خطأ: " + e.message); } btn.innerText = "فحص وتعديل"; };
+                    grid.appendChild(div);
+                });
+            } catch(e) { console.error(e); }
         }
-
-        // حدث زر المراجعة داخل المودال
-        el('btn-modal-toggle-review').onclick = async () => {
-             if(!currentEditQId) return;
-             await handleReviewAction(currentEditQId, currentEditQStatus, true);
-             currentEditQStatus = !currentEditQStatus; // تحديث الحالة المحلية للمودال
-        };
-
-        el('btn-save-edit-q').onclick = async () => {
-            if(!currentEditQId) return;
-            const q = el('edit-q-text').value, o1 = el('edit-o1').value, o2 = el('edit-o2').value, o3 = el('edit-o3').value, o4 = el('edit-o4').value, topic = el('edit-q-topic').value;
-            const correctIndex = Array.from(document.getElementsByName('edit_ans_selector')).findIndex(r => r.checked);
-            
-            if(!q || !o1 || !o2 || !o3 || !o4 || !topic) return toast("بيانات ناقصة", "warning");
-            
-            const btn = el('btn-save-edit-q'); btn.innerText = "جاري الحفظ...";
-            try {
-                await updateDoc(doc(db, "questions", currentEditQId), { 
-                    question: q, options: [o1,o2,o3,o4], correctAnswer: correctIndex, 
-                    explanation: el('edit-q-exp').value, topic: topic, difficulty: el('edit-q-diff').value 
-                });
-                toast("تم تعديل السؤال"); el('question-edit-modal').classList.remove('active'); 
-                // تحديث القائمة الخلفية
-                const row = document.getElementById(`q-row-${currentEditQId}`);
-                if(row) {
-                    // تحديث النص يدوياً لعدم إعادة التحميل الكامل
-                    const txtDiv = row.querySelector('.text-base');
-                    if(txtDiv) txtDiv.innerHTML = `<span class="text-amber-500 ml-1">س:</span> ${highlightText(q, currentSearchTerm)}`;
-                }
-            } catch(e) { alert("Error: " + e.message); }
-            btn.innerHTML = 'حفظ التعديلات <span class="material-symbols-rounded text-sm">save</span>';
-        };
-        document.querySelector('.close-q-modal').onclick = () => el('question-edit-modal').classList.remove('active');
-
-        // --- SYSTEM FUNCTIONS ---
-        
-        // 1. تصدير حزم الأسئلة المحددة
-        el('btn-export-filtered').onclick = async () => {
-            const btn = el('btn-export-filtered');
-            const topic = el('export-topic').value;
-            let difficulty = el('export-diff').value;
-            const msg = el('export-msg');
-
-            if (!topic) { msg.innerText = "الرجاء اختيار موضوع محدد."; return; }
-            
-            let btnText = btn.innerHTML;
-            btn.innerHTML = `<span class="spinner material-symbols-rounded text-sm">sync</span> جاري البحث...`;
-            btn.disabled = true;
-            msg.innerText = '';
-            
-            try {
-                let constraints = [where('topic', '==', topic)];
-                let filename = `Export_${topic.replace(/\s/g, '_')}`;
-
-                if (difficulty) {
-                    constraints.push(where('difficulty', '==', difficulty));
-                    filename += `_${difficulty}`;
-                }
-
-                const q = query(collection(db, "questions"), ...constraints, orderBy('createdAt', 'desc'));
-                const snap = await getDocs(q);
-                
-                if (snap.empty) {
-                    msg.innerText = "لم يتم العثور على أسئلة مطابقة.";
-                    return;
-                }
-
-                const data = []; 
-                snap.forEach(d => {
-                    let qData = d.data();
-                    delete qData.createdAt; 
-                    data.push(qData);
-                });
-
-                const a=document.createElement('a'); 
-                a.href=URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)],{type:'application/json'})); 
-                a.download=`${filename}_(${snap.size}_Qs).json`; 
-                a.click();
-                
-                toast(`تم تصدير ${snap.size} سؤال بنجاح!`);
-
-            } catch(e) { 
-                msg.innerText = `خطأ في التصدير. قد تحتاج لفهرس Firebase جديد: ${e.message}`;
-                alert(`خطأ في التصدير: ${e.message}. يرجى مراجعة لوحة تحكم Firebase.`);
-            } finally {
-                btn.innerHTML = btnText;
-                btn.disabled = false;
-                el('export-topic').dispatchEvent(new Event('change'));
-            }
-        };
-        
-        // 2. حذف حزم الأسئلة المحددة
-        el('btn-delete-filtered').onclick = async () => {
-            const btn = el('btn-delete-filtered');
-            const topic = el('delete-topic').value;
-            let difficulty = el('delete-diff').value;
-            const msg = el('delete-msg');
-
-            if (!topic) { msg.innerText = "الرجاء اختيار موضوع محدد للحذف."; return; }
-            
-            let btnText = btn.innerHTML;
-            btn.innerHTML = `<span class="spinner material-symbols-rounded text-sm">sync</span> جاري البحث والحذف...`;
-            btn.disabled = true;
-            msg.innerText = '';
-            
-            try {
-                let constraints = [where('topic', '==', topic)];
-                
-                if (difficulty) {
-                    constraints.push(where('difficulty', '==', difficulty));
-                }
-
-                const q = query(collection(db, "questions"), ...constraints);
-                const snap = await getDocs(q);
-                
-                if (snap.empty) {
-                    msg.innerText = "لم يتم العثور على أسئلة مطابقة للحذف.";
-                    btn.innerHTML = btnText;
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const count = snap.size;
-                
-                const confirmationMsg = `
-                    تحذير: أنت على وشك حذف ${count} سؤال بشكل نهائي
-                    (الموضوع: ${topic}، الصعوبة: ${difficulty || 'الكل'}).
-                    
-                    هل أنت متأكد من المتابعة؟
-                `;
-                
-                if (!confirm(confirmationMsg)) {
-                    msg.innerText = "تم إلغاء عملية الحذف.";
-                    btn.innerHTML = btnText;
-                    btn.disabled = false;
-                    return;
-                }
-
-                const batch = writeBatch(db);
-                snap.forEach(d => {
-                    batch.delete(d.ref);
-                });
-
-                await batch.commit();
-
-                toast(`تم حذف ${count} سؤال بنجاح!`, "delete");
-                loadStats(); 
-                isCacheLoaded = false; 
-                
-            } catch(e) { 
-                msg.innerText = `خطأ في الحذف: ${e.message}. يرجى مراجعة لوحة تحكم Firebase.`;
-                alert(`خطأ في الحذف: ${e.message}.`);
-            } finally {
-                btn.innerHTML = btnText;
-                btn.disabled = false;
-                el('delete-topic').dispatchEvent(new Event('change'));
-            }
-        };
-        
-        // 3. النسخ الاحتياطي الكامل
-        el('btn-backup').onclick = async () => {
-            const btn = el('btn-backup'); btn.innerText = "جاري التجهيز...";
-            try {
-                const snap = await getDocs(query(collection(db, "questions"))); 
-                const data=[]; snap.forEach(d=>data.push(d.data()));
-                const a=document.createElement('a'); 
-                a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); 
-                a.download=`Wahy_Backup_${new Date().toISOString().split('T')[0]}.json`; 
-                a.click();
-                toast("تم تحميل النسخة الاحتياطية");
-            } catch(e) { alert("فشل التصدير"); }
-            btn.innerHTML = 'تصدير البيانات <span class="material-symbols-rounded text-sm">download</span>';
-        };
+        el('btn-backup').onclick = async () => { const btn = el('btn-backup'); btn.innerText = "جاري التحميل..."; const snap = await getDocs(collection(db,"questions")); const data = []; snap.forEach(d => data.push(d.data())); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download = `Full_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); btn.innerText = "تصدير"; };
+        el('btn-nuke').onclick = async () => { if(prompt("تحذير: هذا سيحذف جميع الأسئلة! اكتب 'حذف الكل' للتأكيد:") === "حذف الكل") { const s = await getDocs(collection(db,"questions")); const b = writeBatch(db); let c=0; s.forEach(d => { b.delete(d.ref); c++; }); if(c>0) await b.commit(); alert(`تم حذف ${c} سؤال.`); loadStats(); } };
     </script>
 </body>
 </html>

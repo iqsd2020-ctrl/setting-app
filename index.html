@@ -290,6 +290,17 @@
                 <div id="view-system" class="view-section hidden space-y-4 fade-in">
                     <h3 class="text-xl text-white font-bold border-b border-slate-700 pb-3 flex items-center gap-3"><span class="material-symbols-rounded text-slate-400 bg-slate-700/30 p-2 rounded-lg">settings</span> النظام</h3>
                     <div class="glass p-6 space-y-5 border-r-4 border-r-green-500">
+                    <div class="glass p-6 space-y-4 border-r-4 border-r-amber-500 mb-4">
+    <h4 class="text-lg text-amber-500 font-bold flex items-center gap-2">
+        <span class="material-symbols-rounded">psychology</span> إعدادات المدقق الذكي (Gemini AI)
+    </h4>
+    <p class="text-xs text-slate-400">أدخل مفتاح API الخاص بك لتفعيل ميزات التدقيق وكشف التكرار.</p>
+    <div class="flex gap-2">
+        <input type="password" id="gemini-api-key" class="input-box text-sm font-mono text-amber-500" placeholder="Paste Gemini API Key Here...">
+        <button id="btn-save-api-key" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold text-xs shrink-0">حفظ المفتاح</button>
+    </div>
+</div>
+
                         <h4 class="text-lg text-green-400 font-bold"><span class="material-symbols-rounded">download</span> تصدير مخصص (Surgical Export)</h4>
                         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             <select id="export-cat" class="input-box text-xs"></select><select id="export-topic" class="input-box text-xs" disabled></select><select id="export-diff" class="input-box text-xs"><option value="">كل المستويات</option><option value="سهل">سهل</option><option value="متوسط">متوسط</option><option value="صعب">صعب</option></select>
@@ -350,12 +361,68 @@
                 </div>
                 <textarea id="edit-q-exp" class="input-box h-20 text-sm resize-none bg-slate-800/50" placeholder="الشرح..."></textarea>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3"><select id="edit-q-cat" class="input-box text-xs"></select><select id="edit-q-topic" class="input-box text-xs"></select><select id="edit-q-diff" class="input-box text-xs"><option value="متوسط">متوسط</option><option value="سهل">سهل</option><option value="صعب">صعب</option></select></div>
+                <button id="btn-ai-check" class="w-full mb-3 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2 border border-purple-500/50">
+    <span class="material-symbols-rounded">psychology</span> تحليل وتدقيق السؤال (AI)
+</button>
                 <div class="flex gap-3 pt-2"><button id="btn-modal-toggle-review" class="flex-1 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 transition font-bold">حالة المراجعة</button><button id="btn-save-edit-q" class="flex-[2] bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition">حفظ التعديلات</button></div>
             </div>
         </div>
     </div>
 
     <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/95 text-white px-8 py-4 rounded-2xl shadow-2xl border border-amber-500/40 hidden z-[80] flex items-center gap-4 transition-all duration-300 backdrop-blur-md min-w-[320px] justify-center"><span class="material-symbols-rounded text-amber-500 text-2xl" id="toast-icon">check_circle</span><span id="toast-msg" class="text-sm font-bold"></span></div>
+
+<div id="ai-report-modal" class="modal-overlay z-[60]">
+    <div class="modal-content p-0 border-t-4 border-t-purple-500 overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="p-4 border-b border-slate-700 bg-slate-900/50 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-purple-400 flex items-center gap-2">
+                <span class="material-symbols-rounded">psychology</span> تقرير المساعد الذكي
+            </h3>
+            <button onclick="document.getElementById('ai-report-modal').classList.remove('active')" class="text-slate-400 hover:text-white transition">✕</button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto space-y-6">
+            <div id="ai-status-box" class="p-4 rounded-lg border flex items-start gap-3">
+                <span id="ai-status-icon" class="material-symbols-rounded text-3xl mt-1"></span>
+                <div>
+                    <h4 id="ai-status-title" class="font-bold text-lg"></h4>
+                    <p id="ai-status-desc" class="text-sm opacity-90 mt-1"></p>
+                </div>
+            </div>
+
+            <div id="ai-dups-section" class="hidden">
+                <h4 class="text-white font-bold mb-2 flex items-center gap-2 text-sm">
+                    <span class="material-symbols-rounded text-red-400">content_copy</span> احتمالية تكرار أو تناقض:
+                </h4>
+                <div id="ai-dups-list" class="space-y-2 text-xs"></div>
+            </div>
+
+            <div>
+                <h4 class="text-white font-bold mb-2 flex items-center gap-2 text-sm">
+                    <span class="material-symbols-rounded text-blue-400">fact_check</span> ملاحظات التدقيق:
+                </h4>
+                <ul id="ai-feedback-list" class="list-disc list-inside space-y-1 text-slate-300 text-sm marker:text-purple-500"></ul>
+            </div>
+
+            <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                <h4 class="text-green-400 font-bold mb-2 text-sm">💡 النسخة المحسنة المقترحة:</h4>
+                <div class="space-y-2">
+                    <div class="text-sm font-bold text-white bg-slate-900 p-2 rounded" id="ai-fix-q"></div>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-300" id="ai-fix-opts"></div>
+                    <div class="text-xs text-blue-200 bg-slate-900 p-2 rounded" id="ai-fix-exp"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-700 bg-slate-900/50 flex gap-3">
+            <button id="btn-ai-apply" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded">auto_fix</span> تطبيق التصحيحات
+            </button>
+            <button onclick="document.getElementById('ai-report-modal').classList.remove('active')" class="px-6 py-2 rounded-lg font-bold text-slate-400 hover:bg-slate-800 transition">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
@@ -681,6 +748,202 @@ function renderDiffChart(dataSource) {
     });
 }
 
+        // ==========================================
+        //  AI MODULE - GEMINI INTEGRATION 🧠
+        // ==========================================
+
+        // 1. تحميل وحفظ مفتاح API
+        const loadApiKey = () => {
+            const key = localStorage.getItem('gemini_api_key');
+            if(key) el('gemini-api-key').value = key;
+        };
+        loadApiKey(); // استدعاء عند البدء
+
+        el('btn-save-api-key').onclick = () => {
+            const key = el('gemini-api-key').value.trim();
+            if(!key) return toast("يرجى إدخال المفتاح", "warning");
+            localStorage.setItem('gemini_api_key', key);
+            toast("تم حفظ المفتاح بنجاح");
+        };
+
+        // 2. دالة جلب السياق (الأسئلة المشابهة) من الذاكرة المحلية
+        // الهدف: تقليل استهلاك التوكنز عبر إرسال الأسئلة ذات الصلة فقط
+        function getSimilarQuestionsContext(currentQ, topic) {
+            if(!allQuestionsCache || allQuestionsCache.length === 0) return [];
+            
+            // فلترة أولية حسب الموضوع لتقليص العدد
+            let pool = allQuestionsCache.filter(q => q.topic === topic && q.id !== window.currQId);
+            
+            // بحث بسيط عن تشابه الكلمات (Simulated Vector Search)
+            const keywords = currentQ.split(' ').filter(w => w.length > 3);
+            
+            const scored = pool.map(q => {
+                let score = 0;
+                keywords.forEach(kw => { if(q.question.includes(kw)) score++; });
+                return { ...q, score };
+            });
+
+            // إرجاع أعلى 10 أسئلة مشابهة فقط
+            return scored.filter(x => x.score > 0).sort((a,b) => b.score - a.score).slice(0, 10).map(q => ({
+                q: q.question,
+                a: q.options[q.correctAnswer],
+                id: q.id
+            }));
+        }
+
+        // 3. المتغير لتخزين الاقتراح الحالي
+        let currentAiSuggestion = null;
+
+        // 4. دالة الفحص الرئيسية
+        el('btn-ai-check').onclick = async () => {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if(!apiKey) return alert("يرجى إعداد مفتاح API في قسم النظام أولاً!");
+
+            // تجميع البيانات من الواجهة
+            const qData = {
+                question: el('edit-q-text').value,
+                options: [el('edit-o1').value, el('edit-o2').value, el('edit-o3').value, el('edit-o4').value],
+                correctAnswer: document.querySelector('input[name="edit_ans_selector"]:checked')?.value || 0,
+                explanation: el('edit-q-exp').value,
+                topic: el('edit-q-topic').value
+            };
+
+            // واجهة التحميل
+            const btn = el('btn-ai-check');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التحليل...`;
+            btn.disabled = true;
+
+            try {
+                // جلب سياق للمقارنة (لكشف التكرار)
+                const contextList = getSimilarQuestionsContext(qData.question, qData.topic);
+
+                // بناء الأمر (Prompt)
+                const prompt = `
+                أنت خبير لغوي ومدقق لمسابقة دينية شيعية.
+                قم بتحليل هذا السؤال بتنسيق JSON دقيق.
+
+                السؤال الحالي:
+                نص: "${qData.question}"
+                الخيارات: ${JSON.stringify(qData.options)}
+                رقم الإجابة الصحيحة: ${qData.correctAnswer} (الخيار هو: ${qData.options[qData.correctAnswer]})
+                الشرح: "${qData.explanation}"
+
+                قائمة أسئلة موجودة سابقاً في قاعدة البيانات (للمقارنة):
+                ${JSON.stringify(contextList)}
+
+                المطلوب منك (JSON Format Only):
+                1. "status": (safe/warning/danger). "warning" لو هناك أخطاء لغوية بسيطة، "danger" لو هناك خطأ عقائدي أو تكرار واضح.
+                2. "feedback": قائمة نصية بالملاحظات (إملاء، صياغة، منطق الخيارات).
+                3. "duplicates": قائمة بالأسئلة المشابهة جداً من القائمة المرفقة (إن وجدت) مع سبب الشك.
+                4. "suggestion": نسخة محسنة ومصححة لغوياً من السؤال والخيارات والشرح.
+
+                Format:
+                {
+                    "status": "safe|warning|danger",
+                    "title": "عنوان قصير للحالة",
+                    "feedback": ["ملاحظة 1", "ملاحظة 2"],
+                    "duplicates": [{"existing_id": "...", "reason": "..."}],
+                    "suggestion": {
+                        "question": "...",
+                        "options": ["...", "...", "...", "..."],
+                        "correctAnswer": 0,
+                        "explanation": "..."
+                    }
+                }
+                `;
+
+                // استدعاء Gemini API
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                // معالجة الرد (تنظيف JSON)
+                let rawText = data.candidates[0].content.parts[0].text;
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim(); // إزالة تنسيق الماركداون
+                const result = JSON.parse(rawText);
+
+                currentAiSuggestion = result.suggestion; // حفظ الاقتراح للتطبيق
+
+                // --- عرض النتائج في النافذة ---
+                
+                // 1. الحالة واللون
+                const statusBox = el('ai-status-box');
+                const titleEl = el('ai-status-title');
+                const descEl = el('ai-status-desc');
+                const iconEl = el('ai-status-icon');
+
+                if(result.status === 'safe') {
+                    statusBox.className = "p-4 rounded-lg border flex items-start gap-3 bg-green-900/20 border-green-500/50 text-green-400";
+                    iconEl.innerText = "check_circle";
+                } else if (result.status === 'warning') {
+                    statusBox.className = "p-4 rounded-lg border flex items-start gap-3 bg-amber-900/20 border-amber-500/50 text-amber-500";
+                    iconEl.innerText = "warning";
+                } else {
+                    statusBox.className = "p-4 rounded-lg border flex items-start gap-3 bg-red-900/20 border-red-500/50 text-red-400";
+                    iconEl.innerText = "report";
+                }
+                titleEl.innerText = result.title || "نتيجة الفحص";
+                descEl.innerText = result.feedback.length > 0 ? "يرجى مراجعة الملاحظات أدناه." : "السؤال يبدو سليماً.";
+
+                // 2. قائمة الملاحظات
+                const ul = el('ai-feedback-list'); ul.innerHTML = '';
+                result.feedback.forEach(f => ul.innerHTML += `<li>${f}</li>`);
+
+                // 3. التكرار
+                const dupSec = el('ai-dups-section');
+                const dupList = el('ai-dups-list');
+                if(result.duplicates && result.duplicates.length > 0) {
+                    dupSec.classList.remove('hidden');
+                    dupList.innerHTML = '';
+                    result.duplicates.forEach(d => {
+                        dupList.innerHTML += `<div class="bg-red-900/30 p-2 rounded border border-red-500/30">⚠️ تضارب محتمل مع ID: ${d.existing_id} - ${d.reason}</div>`;
+                    });
+                } else {
+                    dupSec.classList.add('hidden');
+                }
+
+                // 4. الاقتراح
+                el('ai-fix-q').innerText = result.suggestion.question;
+                el('ai-fix-opts').innerHTML = result.suggestion.options.map((o,i) => `<div class="${i===result.suggestion.correctAnswer?'text-green-400 font-bold':''}">${i+1}. ${o}</div>`).join('');
+                el('ai-fix-exp').innerText = result.suggestion.explanation;
+
+                // فتح النافذة
+                el('ai-report-modal').classList.add('active');
+
+            } catch(e) {
+                console.error(e);
+                alert("حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: " + e.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        // 5. زر تطبيق التصحيحات
+        el('btn-ai-apply').onclick = () => {
+            if(!currentAiSuggestion) return;
+            
+            el('edit-q-text').value = currentAiSuggestion.question;
+            el('edit-o1').value = currentAiSuggestion.options[0];
+            el('edit-o2').value = currentAiSuggestion.options[1];
+            el('edit-o3').value = currentAiSuggestion.options[2];
+            el('edit-o4').value = currentAiSuggestion.options[3];
+            el('edit-q-exp').value = currentAiSuggestion.explanation;
+            
+            // تحديث الإجابة الصحيحة
+            const radios = document.getElementsByName('edit_ans_selector');
+            if(radios[currentAiSuggestion.correctAnswer]) radios[currentAiSuggestion.correctAnswer].checked = true;
+
+            toast("تم تطبيق التصحيحات! اضغط حفظ الآن.");
+            el('ai-report-modal').classList.remove('active');
+        };
 
 
         // --- UPDATED USERS (Responsive Grid) ---
@@ -1138,6 +1401,9 @@ function renderDiffChart(dataSource) {
         }
         el('btn-backup').onclick = async () => { const btn = el('btn-backup'); btn.innerText = "جاري التحميل..."; const snap = await getDocs(collection(db,"questions")); const data = []; snap.forEach(d => data.push(d.data())); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download = `Full_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); btn.innerText = "تصدير"; };
         el('btn-nuke').onclick = async () => { if(prompt("تحذير: هذا سيحذف جميع الأسئلة! اكتب 'حذف الكل' للتأكيد:") === "حذف الكل") { const s = await getDocs(collection(db,"questions")); const b = writeBatch(db); let c=0; s.forEach(d => { b.delete(d.ref); c++; }); if(c>0) await b.commit(); alert(`تم حذف ${c} سؤال.`); loadStats(); } };
+       
+        
+
     </script>
 </body>
 </html>

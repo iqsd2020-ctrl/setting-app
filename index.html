@@ -308,6 +308,63 @@
                         <div><h4 class="text-white font-bold">نسخ احتياطي كامل</h4><p class="text-xs text-slate-400">تنزيل كل الأسئلة</p></div>
                         <button id="btn-backup" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-bold text-sm">تصدير</button>
                     </div>
+                                        
+                                             <div class="glass p-6 space-y-6 border-4 border-amber-500/50 bg-amber-900/10 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded-br-lg z-10">منطقة حساسة</div>
+                        
+                        <div class="text-center mb-4">
+                            <h4 class="text-xl text-white font-bold flex items-center justify-center gap-2">
+                                <span class="material-symbols-rounded text-amber-500 text-3xl">move_up</span> مركز الترحيل والنقل
+                            </h4>
+                            <p class="text-xs text-slate-400 mt-2">نقل البيانات لمشروع جديد مع الحفاظ على المعرفات والتواريخ.</p>
+                        </div>
+
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h5 class="text-blue-400 font-bold mb-3 flex items-center gap-2"><span class="material-symbols-rounded">group</span> المستخدمين</h5>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button id="btn-export-users-json" class="bg-slate-700 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+                                    <span class="material-symbols-rounded">download</span> تصدير
+                                </button>
+                                <label class="bg-slate-700 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer">
+                                    <span class="material-symbols-rounded">upload</span> استيراد
+                                    <input type="file" id="file-import-users" accept=".json" class="hidden">
+                                </label>
+                            </div>
+                            <div id="progress-users" class="text-[10px] text-center mt-2 text-slate-400 h-4"></div>
+                        </div>
+
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h5 class="text-purple-400 font-bold mb-3 flex items-center gap-2"><span class="material-symbols-rounded">library_books</span> الأسئلة</h5>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button id="btn-export-questions-json" class="bg-slate-700 hover:bg-purple-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+                                    <span class="material-symbols-rounded">download</span> تصدير
+                                </button>
+                                <label class="bg-slate-700 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer">
+                                    <span class="material-symbols-rounded">upload</span> استيراد
+                                    <input type="file" id="file-import-questions" accept=".json" class="hidden">
+                                </label>
+                            </div>
+                            <div id="progress-questions" class="text-[10px] text-center mt-2 text-slate-400 h-4"></div>
+                        </div>
+
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h5 class="text-red-400 font-bold mb-3 flex items-center gap-2"><span class="material-symbols-rounded">folder_open</span> أخرى</h5>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button id="btn-export-others-json" class="bg-slate-700 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+                                    <span class="material-symbols-rounded">download</span> تصدير
+                                </button>
+                                <label class="bg-slate-700 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer">
+                                    <span class="material-symbols-rounded">upload</span> استيراد
+                                    <input type="file" id="file-import-others" accept=".json" class="hidden">
+                                </label>
+                            </div>
+                                   <div id="progress-others" class="text-[10px] text-center mt-2 text-slate-400 h-4"></div>
+                        </div>
+                      </div>
+
+
+                    
+
                                         <div class="glass p-6 flex justify-between items-center border-r-4 border-r-red-600 bg-red-900/10">
                         <div><h4 class="text-red-400 font-bold">منطقة الخطر (Nuke)</h4><p class="text-xs text-slate-400">تصفير النظام بالكامل</p></div>
                         <button id="btn-nuke" class="bg-red-900 hover:bg-red-800 text-white px-6 py-2 rounded-lg font-bold text-sm border border-red-700">تصفير</button>
@@ -1352,6 +1409,187 @@ el('btn-save-edit-q').onclick = async () => {
             window.scrollTo(0,0);
         };
 
+        // ==========================================
+        // 🚀 محرك الترحيل الذكي (MIGRATION ENGINE)
+        // ==========================================
+        
+        // 1. دالة التصدير العامة (تحفظ البيانات مع ID الأصلي)
+        async function exportCollection(colName, filename, btnId) {
+            const btn = el(btnId);
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span>`;
+            btn.disabled = true;
+
+            try {
+                const snap = await getDocs(collection(db, colName));
+                const data = [];
+                snap.forEach(d => {
+                    // نحتفظ بالـ ID داخل البيانات لضمان استعادته
+                    data.push({ _docId: d.id, ...d.data() });
+                });
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}_(${data.length})_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                toast(`تم تصدير ${data.length} مستند بنجاح ✅`);
+            } catch (e) {
+                console.error(e);
+                alert("خطأ في التصدير: " + e.message);
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        // 2. دالة معالجة التواريخ (The Time Machine) ⏳
+        // هذه الدالة تحول النصوص {seconds, nanoseconds} إلى تواريخ فايربيس حقيقية
+        function restoreTimestamps(obj) {
+            if (obj === null || typeof obj !== 'object') return obj;
+            
+            // إذا وجدنا كائن يشبه التايم ستامب، نحوله
+            if (obj.hasOwnProperty('seconds') && obj.hasOwnProperty('nanoseconds') && Object.keys(obj).length === 2) {
+                return new window.Timestamp(obj.seconds, obj.nanoseconds);
+            }
+
+            // البحث داخل المصفوفات والكائنات المتداخلة
+            if (Array.isArray(obj)) {
+                return obj.map(item => restoreTimestamps(item));
+            }
+
+            const newObj = {};
+            for (const key in obj) {
+                newObj[key] = restoreTimestamps(obj[key]);
+            }
+            return newObj;
+        }
+        
+        // نحتاج لتعريف Timestamp في النافذة لأنه مستورد كـ module
+        import { Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        window.Timestamp = Timestamp; // إتاحة الوصول للدالة
+
+        // 3. دالة الاستيراد العامة (تستعيد البيانات بنفس الـ ID)
+        async function importCollection(colName, fileInputId, progressId) {
+            const input = el(fileInputId);
+            const file = input.files[0];
+            if (!file) return;
+
+            const progressEl = el(progressId);
+            progressEl.innerText = "جاري قراءة الملف...";
+            progressEl.className = "text-xs text-center mt-2 text-amber-500 font-bold";
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data)) throw new Error("الملف لا يحتوي على مصفوفة بيانات صالحة");
+
+                    progressEl.innerText = `تم العثور على ${data.length} عنصر. جاري الرفع...`;
+                    
+                    let successCount = 0;
+                    let errorCount = 0;
+
+                    for (let i = 0; i < data.length; i++) {
+                        let item = data[i];
+                        const docId = item._docId; // استخراج الـ ID الأصلي
+                        
+                        if (!docId) {
+                            console.warn("عنصر بدون ID:", item);
+                            errorCount++;
+                            continue;
+                        }
+
+                        // تنظيف البيانات (حذف الـ ID المؤقت وإصلاح التواريخ)
+                        delete item._docId;
+                        item = restoreTimestamps(item);
+
+                        // الحفظ في فايربيس (setDoc يضمن استخدام نفس الـ ID)
+                        await setDoc(doc(db, colName, docId), item);
+                        
+                        successCount++;
+                        // تحديث العداد كل 10 عناصر
+                        if (i % 10 === 0) progressEl.innerText = `جاري المعالجة: ${i + 1} / ${data.length}`;
+                    }
+
+                    progressEl.innerText = `✅ تم! نجح: ${successCount} | فشل: ${errorCount}`;
+                    progressEl.className = "text-xs text-center mt-2 text-green-400 font-bold";
+                    toast(`تم استيراد ${successCount} مستند بنجاح`);
+                    
+                    // تحديث الواجهة إذا كنا نستورد في نفس الشاشة
+                    if(colName === 'questions') loadStats();
+                    if(colName === 'users') loadUsers();
+                    
+                    input.value = ''; // تصفير الملف
+
+                } catch (err) {
+                    console.error(err);
+                    alert("فشل الاستيراد! الملف تالف أو غير متوافق.\n" + err.message);
+                    progressEl.innerText = "❌ حدث خطأ";
+                    progressEl.className = "text-xs text-center mt-2 text-red-500 font-bold";
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- ربط الأزرار بالأحداث ---
+        
+        // المستخدمين
+        el('btn-export-users-json').onclick = () => exportCollection('users', 'Users_Backup', 'btn-export-users-json');
+        el('file-import-users').onchange = () => importCollection('users', 'file-import-users', 'progress-users');
+
+        // الأسئلة
+        el('btn-export-questions-json').onclick = () => exportCollection('questions', 'Questions_Backup', 'btn-export-questions-json');
+        el('file-import-questions').onchange = () => importCollection('questions', 'file-import-questions', 'progress-questions');
+
+        // البيانات الأخرى (نقوم بتصدير البلاغات والنظام معاً أو منفصلين، هنا سأجعلها للبلاغات كمثال، ويمكنك تكرارها للنظام)
+        // دالة خاصة لتصدير "أخرى" (تجمع البلاغات والنظام)
+        el('btn-export-others-json').onclick = async () => {
+             const btn = el('btn-export-others-json');
+             btn.disabled = true; btn.innerHTML = '...';
+             try {
+                 const reports = []; (await getDocs(collection(db, "reports"))).forEach(d => reports.push({_docId: d.id, ...d.data(), _collection: 'reports'}));
+                 const system = []; (await getDocs(collection(db, "system"))).forEach(d => system.push({_docId: d.id, ...d.data(), _collection: 'system'}));
+                 const combined = [...reports, ...system];
+                 
+                 const blob = new Blob([JSON.stringify(combined, null, 2)], { type: 'application/json' });
+                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Others_Backup_${combined.length}.json`;
+                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                 btn.innerHTML = `<span class="material-symbols-rounded">download</span> تصدير`; btn.disabled = false;
+             } catch(e) { alert(e.message); btn.disabled=false; }
+        };
+
+        // دالة استيراد "أخرى" (توزع البيانات حسب نوعها)
+        el('file-import-others').onchange = () => {
+            const input = el('file-import-others');
+            const file = input.files[0];
+            if (!file) return;
+            const progress = el('progress-others');
+            progress.innerText = "جاري التحليل...";
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = JSON.parse(e.target.result);
+                let count = 0;
+                for(let item of data) {
+                    const col = item._collection; // معرفة المجموعة (reports أو system)
+                    const id = item._docId;
+                    delete item._collection; delete item._docId;
+                    item = restoreTimestamps(item);
+                    if(col && id) {
+                        await setDoc(doc(db, col, id), item);
+                        count++;
+                    }
+                    progress.innerText = `تم استعادة ${count} عنصر...`;
+                }
+                progress.innerText = `✅ تم استعادة ${count} عنصر بنجاح`;
+                input.value = '';
+            };
+            reader.readAsText(file);
+        };
 
     </script>
 </body>

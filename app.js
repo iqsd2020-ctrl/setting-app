@@ -1,22 +1,20 @@
-/**
- * app.js
- * المنطق الرئيسي للتطبيق: الاتصال بـ Firebase، إدارة الأحداث، وتحميل البيانات.
- */
-
 // =========================================================
 // 1. IMPORTS & CONFIGURATION
 // =========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, writeBatch, startAfter, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, writeBatch, startAfter, deleteField, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 // استيراد البيانات الثابتة من ملف data.js
 import { topics, badgesMap, badgesData } from './data.js';
 
-// تعريف كائن Timestamp ليكون متاحاً عالمياً (يستخدم في محرك الترحيل)
+// تعريف كائن Timestamp ليكون متاحاً عالمياً
 window.Timestamp = Timestamp;
 
-// إعدادات Firebase (يجب تغييرها ببيانات مشروعك الحقيقية)
+// ===> (تم النقل هنا) مفتاح API الخاص بالذكاء الاصطناعي <===
+const GEMINI_API_KEY = "AIzaSyAE1fkxt0RsTtzmLRnkHLfbAo3eEWDu6nI"; 
+
+// إعدادات Firebase
 const firebaseConfig = { 
     apiKey: "AIzaSyC6FoHbL8CDTPX1MNaNWyDIA-6xheX0t4s", 
     authDomain: "ahl-albayet.firebaseapp.com", 
@@ -29,7 +27,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
+// ... باقي الكود كما هو
 let isAuthReady = false;
 signInAnonymously(auth).then(() => { 
     isAuthReady = true; 
@@ -857,7 +855,8 @@ async function loadQuestions(loadMore = false) {
 }
 
 /**
- * دالة عرض بطاقة السؤال (النسخة التفاعلية مع الحفظ السريع)
+/**
+ * دالة عرض بطاقة السؤال (محدثة مع زر الذكاء الاصطناعي)
  */
 function renderQuestionCard(d, container) {
     const div = document.createElement('div');
@@ -892,7 +891,6 @@ function renderQuestionCard(d, container) {
             <div class="flex items-center gap-2">
                 ${statusBadge}
                 <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">${d.topic}</span>
-                ${d.difficulty ? `<span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">${d.difficulty}</span>` : ''}
                 <span class="text-[10px] text-slate-600 font-mono hidden md:inline">${d.id}</span>
             </div>
             <button class="text-slate-500 hover:text-white transition btn-advanced-edit" title="تعديل التصنيف والمتقدم">
@@ -911,20 +909,31 @@ function renderQuestionCard(d, container) {
             </div>
         </div>
 
-        <div class="flex gap-2 justify-end border-t border-slate-700/50 p-2 bg-slate-900/20 rounded-b-xl">
-            <button class="text-xs text-purple-400 hover:bg-purple-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-dup-q opacity-70 hover:opacity-100"><span class="material-symbols-rounded text-sm">content_copy</span> تكرار</button>
+        <div class="flex flex-wrap gap-2 justify-end border-t border-slate-700/50 p-2 bg-slate-900/20 rounded-b-xl">
+            <button class="text-xs text-indigo-400 hover:bg-indigo-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-ai-check border border-indigo-500/20">
+                <span id="ai-icon-${d.id}" class="material-symbols-rounded text-sm">smart_toy</span> 
+                <span id="ai-text-${d.id}">فحص AI</span>
+            </button>
+            
+            <div class="w-[1px] h-6 bg-slate-700 mx-1"></div> 
+
             <button class="text-xs ${isReviewed ? 'text-slate-400' : 'text-green-400'} hover:bg-slate-700 px-3 py-1.5 rounded transition flex items-center gap-1 btn-toggle-review opacity-70 hover:opacity-100">
                 <span class="material-symbols-rounded text-sm">${isReviewed ? 'unpublished' : 'check_circle'}</span> ${isReviewed ? 'إلغاء' : 'اعتماد'}
             </button>
             <button class="text-xs text-red-400 hover:bg-red-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-del-q opacity-70 hover:opacity-100"><span class="material-symbols-rounded text-sm">delete</span> حذف</button>
-            <div class="w-[1px] h-6 bg-slate-700 mx-1"></div> 
-            <button class="text-xs text-white bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded shadow-lg transition flex items-center gap-1 btn-quick-save font-bold">
+            
+            <button class="text-xs text-white bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded shadow-lg transition flex items-center gap-1 btn-quick-save font-bold mr-auto md:mr-0">
                 <span class="material-symbols-rounded text-sm">save</span> حفظ
             </button>
         </div>
     `;
 
-    // 1. زر الحفظ السريع
+// 1. ربط زر الذكاء الاصطناعي
+div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d); // تم حذف 'window.'
+// ...
+
+
+    // 2. زر الحفظ السريع
     div.querySelector('.btn-quick-save').onclick = async () => {
         const newQ = el(`inline-q-${d.id}`).value;
         const newExp = el(`inline-exp-${d.id}`).value;
@@ -944,13 +953,10 @@ function renderQuestionCard(d, container) {
                 correctAnswer: newCorrect,
                 explanation: newExp
             });
-            
-            // تحديث البطاقة بصرياً
             toast("تم حفظ التعديلات ✅");
             btn.innerHTML = '<span class="material-symbols-rounded text-sm">save</span> حفظ';
             div.classList.add('ring-2', 'ring-blue-500');
             setTimeout(() => div.classList.remove('ring-2', 'ring-blue-500'), 500);
-
         } catch(e) {
             console.error(e);
             toast("خطأ في الحفظ", "error");
@@ -958,35 +964,30 @@ function renderQuestionCard(d, container) {
         }
     };
 
-    // 2. زر الحذف
+    // 3. زر الحذف
     div.querySelector('.btn-del-q').onclick = async () => { if(confirm("حذف السؤال نهائياً؟")) { await deleteDoc(doc(db,"questions",d.id)); div.remove(); toast("تم الحذف","delete"); } };
     
-    // 3. زر تبديل الحالة (اعتماد/إلغاء)
+    // 4. زر تبديل الحالة
     div.querySelector('.btn-toggle-review').onclick = async () => {
         const newStatus = !d.isReviewed;
         await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
         d.isReviewed = newStatus;
-        if (el('manage-status-filter').value === 'unreviewed' && newStatus) { div.remove(); } 
-        else { renderQuestionCard({ ...d, isReviewed: newStatus }, container).then(newDiv => div.replaceWith(newDiv)); }
+        // إعادة رسم البطاقة لتحديث الحالة والألوان
+        renderQuestionCard(d, container).then(newDiv => {
+             // نستبدل البطاقة القديمة بالجديدة في نفس المكان
+             const oldDiv = document.getElementById(`q-row-${d.id}`);
+             if(oldDiv) oldDiv.replaceWith(newDiv);
+        });
         toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
     };
 
-    // 4. زر التكرار
-    div.querySelector('.btn-dup-q').onclick = async () => {
-         if(confirm("نسخ السؤال؟")) {
-             const copy = { ...d, createdAt: serverTimestamp(), question: d.question + " (نسخة)", isReviewed: false }; 
-             delete copy.id; 
-             await addDoc(collection(db, "questions"), copy);
-             toast("تم نسخ السؤال"); loadQuestions(false);
-         }
-    };
-
-    // 5. زر الإعدادات المتقدمة (يفتح النافذة القديمة لتغيير التصنيف)
-    div.querySelector('.btn-advanced-edit').onclick = () => openEditQModal(d.id, d);
+    // 5. زر الإعدادات المتقدمة
+    div.querySelector('.btn-advanced-edit').onclick = () => window.openEditQModal(d.id, d);
 
     container.appendChild(div);
     return div;
 }
+
 
 /**
  * فتح وتعبئة بيانات نافذة تعديل السؤال المتقدمة
@@ -1374,3 +1375,140 @@ el('file-import-others').onchange = () => {
     };
     reader.readAsText(file);
 };
+// ==========================================
+// 11. AI ASSISTANT INTEGRATION (GEMINI)
+// ==========================================
+
+// (تم حذف سطر GEMINI_API_KEY من هنا لأنه تم نقله للأعلى)
+
+/**
+ * دالة عرض نافذة نتائج الذكاء الاصطناعي
+ */
+function showAIResultModal(analysis, qData) { 
+    const modal = document.getElementById('ai-modal');
+    const statusBadge = document.getElementById('ai-status-badge');
+    const feedbackText = document.getElementById('ai-feedback-text');
+    const suggestQ = document.getElementById('ai-suggested-q');
+    const suggestExp = document.getElementById('ai-suggested-exp');
+    const applyBtn = document.getElementById('btn-apply-ai-fix');
+    const correctionSection = document.getElementById('ai-correction-section');
+
+    // 1. تعبئة البيانات
+    feedbackText.innerText = analysis.feedback;
+    suggestQ.value = analysis.correction || qData.question;
+    suggestExp.value = analysis.suggested_explanation || qData.explanation || "";
+
+    // 2. ضبط الألوان والحالة
+    if (analysis.status.includes("سليم")) {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
+        statusBadge.innerHTML = '<span class="material-symbols-rounded text-base">check_circle</span> السؤال سليم ولغته صحيحة';
+        correctionSection.classList.add('hidden');
+    } else {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-amber-900/20 text-amber-500 border-amber-500/50";
+        statusBadge.innerHTML = '<span class="material-symbols-rounded text-base">warning</span> يحتاج إلى تحسينات';
+        correctionSection.classList.remove('hidden');
+    }
+
+    // 3. برمجة زر "تطبيق التصحيحات"
+    applyBtn.onclick = () => {
+        const qInput = document.getElementById(`inline-q-${qData.id}`);
+        const expInput = document.getElementById(`inline-exp-${qData.id}`);
+
+        if (qInput) {
+            qInput.value = suggestQ.value;
+            qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
+            setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1000);
+        }
+        
+        if (expInput) {
+            expInput.value = suggestExp.value;
+            expInput.classList.add('border-green-500');
+        }
+
+        modal.classList.remove('active', 'flex');
+        modal.classList.add('hidden');
+        
+        toast("تم تطبيق المقترحات! اضغط 'حفظ' لتثبيتها", "check_circle");
+        
+        const saveBtn = document.querySelector(`#q-row-${qData.id} .btn-quick-save`);
+        if(saveBtn) {
+            saveBtn.classList.add('animate-pulse', 'bg-green-600');
+            setTimeout(()=> saveBtn.classList.remove('animate-pulse', 'bg-green-600'), 2000);
+        }
+    };
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex', 'active');
+    setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95'), 10);
+}
+
+/**
+/**
+ * دالة فحص السؤال باستخدام الذكاء الاصطناعي
+ */
+async function checkQuestionWithAI(questionData) {
+    if (!window.GoogleGenerativeAI) {
+        return toast("مكتبة الذكاء الاصطناعي غير محملة! تأكد من تحديث الصفحة", "error");
+    }
+
+    const btnIcon = document.getElementById(`ai-icon-${questionData.id}`);
+    const btnText = document.getElementById(`ai-text-${questionData.id}`);
+    
+    if(btnIcon) btnIcon.innerText = "hourglass_top";
+    if(btnText) btnText.innerText = "جاري الفحص...";
+
+    try {
+        const genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
+        
+        // تعديل هام: استخدام الاسم الدقيق للإصدار 001 لتجنب خطأ 404
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const prompt = `
+            بصفتك خبيراً لغوياً ومدققاً للمحتوى الإسلامي، قم بمراجعة هذا السؤال المخصص لمسابقة ثقافية:
+
+            --- بيانات السؤال ---
+            - نص السؤال: "${questionData.question}"
+            - الخيارات: [${questionData.options.join(' - ')}]
+            - الإجابة الصحيحة المسجلة: "${questionData.options[questionData.correctAnswer]}"
+            - الشرح الإثرائي: "${questionData.explanation || 'لا يوجد'}"
+            - التصنيف: "${questionData.topic}"
+            ---------------------
+
+            المطلوب منك بالتحديد:
+            1. التأكد من (صحة المعلومة) دينياً وتاريخياً.
+            2. مراجعة (اللغة والإملاء) بدقة.
+            3. التأكد من أن الإجابة الصحيحة المختارة هي الوحيدة الصحيحة ولا يوجد غموض.
+            4. إذا كان الشرح فارغاً، اقترح شرحاً مختصراً ومفيداً.
+
+            أجبني بصيغة JSON فقط (بدون أي نصوص إضافية) بهذا الهيكل:
+            {
+                "status": "سليم" (أو "يحتوي على مشاكل"),
+                "correction": "النص المقترح للسؤال بعد تصحيح الأخطاء (أعد كتابة السؤال كاملاً حتى لو كان صحيحاً)",
+                "suggested_explanation": "نص الشرح المحسن أو المقترح",
+                "feedback": "ملاحظاتك المختصرة جداً (مثلاً: خطأ إملائي في كلمة كذا، أو المعلومة غير دقيقة)"
+            }
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        
+        const cleanJson = text.replace(/```json|```/g, '').trim();
+        const analysis = JSON.parse(cleanJson);
+
+        showAIResultModal(analysis, questionData);
+
+    } catch (error) {
+        console.error("AI Error:", error);
+        
+        // التعامل مع الخطأ 404 بشكل خاص لتقديم نصيحة للمستخدم
+        if (error.message.includes('404') || error.message.includes('not found')) {
+            toast("موديل الذكاء الاصطناعي غير متوفر حالياً، جرب لاحقاً", "error");
+        } else {
+            toast("حدث خطأ أثناء الاتصال بالمساعد الذكي", "error");
+        }
+    } finally {
+        if(btnIcon) btnIcon.innerText = "smart_toy";
+        if(btnText) btnText.innerText = "فحص AI";
+    }
+}

@@ -14,7 +14,19 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
-    
+        <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+    <script type="module">
+      import { GoogleGenerativeAI } from "@google/generative-ai";
+      
+      window.GoogleGenerativeAI = GoogleGenerativeAI;
+    </script>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -377,5 +389,47 @@
     </div>
 
     <script type="module" src="app.js"></script>
+    
+        <div id="ai-modal" class="modal-overlay fixed inset-0 bg-black/85 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
+        <div class="modal-content bg-[#1e293b] w-full max-w-lg border border-indigo-500/50 rounded-xl shadow-2xl overflow-y-auto max-h-[90vh] p-0 transform scale-95 transition-transform flex flex-col">
+            
+            <div class="bg-indigo-900/30 p-4 border-b border-indigo-500/30 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-indigo-400 flex items-center gap-2">
+                    <span class="material-symbols-rounded">psychology</span> تقرير المساعد الذكي
+                </h3>
+                <button onclick="document.getElementById('ai-modal').classList.remove('active', 'flex'); document.getElementById('ai-modal').classList.add('hidden')" class="text-slate-400 hover:text-white transition">✕</button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div id="ai-status-container" class="flex justify-center mb-2">
+                    <span id="ai-status-badge" class="px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2">
+                        </span>
+                </div>
+
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+                    <h4 class="text-xs text-slate-400 font-bold mb-2">الملاحظات:</h4>
+                    <p id="ai-feedback-text" class="text-sm text-slate-200 leading-relaxed"></p>
+                </div>
+
+                <div id="ai-correction-section" class="hidden space-y-2 fade-in">
+                    <h4 class="text-xs text-amber-500 font-bold">⚠️ التصحيح المقترح للسؤال:</h4>
+                    <textarea id="ai-suggested-q" class="w-full h-20 bg-slate-800 border border-amber-500/30 rounded p-2 text-sm text-white resize-none focus:outline-none focus:border-amber-500" readonly></textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs text-blue-400 font-bold">💡 الشرح المقترح:</h4>
+                    <textarea id="ai-suggested-exp" class="w-full h-20 bg-slate-800 border border-blue-500/30 rounded p-2 text-sm text-white resize-none focus:outline-none focus:border-blue-500" readonly></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-700 bg-slate-900/30 flex gap-3">
+                <button onclick="document.getElementById('ai-modal').classList.remove('active', 'flex'); document.getElementById('ai-modal').classList.add('hidden')" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 font-bold text-sm transition">إغلاق</button>
+                <button id="btn-apply-ai-fix" class="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-base">auto_fix</span> تطبيق التصحيحات
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

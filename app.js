@@ -968,18 +968,29 @@ div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d); // ت
     div.querySelector('.btn-del-q').onclick = async () => { if(confirm("حذف السؤال نهائياً؟")) { await deleteDoc(doc(db,"questions",d.id)); div.remove(); toast("تم الحذف","delete"); } };
     
     // 4. زر تبديل الحالة
+        // 4. زر تبديل الحالة
     div.querySelector('.btn-toggle-review').onclick = async () => {
         const newStatus = !d.isReviewed;
+        // تحديث قاعدة البيانات
         await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
         d.isReviewed = newStatus;
-        // إعادة رسم البطاقة لتحديث الحالة والألوان
-        renderQuestionCard(d, container).then(newDiv => {
-             // نستبدل البطاقة القديمة بالجديدة في نفس المكان
-             const oldDiv = document.getElementById(`q-row-${d.id}`);
-             if(oldDiv) oldDiv.replaceWith(newDiv);
-        });
+
+        // التصحيح: استدعاء الدالة مباشرة بدون .then
+        // الدالة ستقوم بإنشاء العنصر وإضافته لنهاية القائمة (append)
+        const newDiv = renderQuestionCard(d, container);
+
+        // نحن نريد وضعه مكان العنصر القديم وليس في النهاية
+        const oldDiv = document.getElementById(`q-row-${d.id}`);
+        
+        // التحقق من أن العنصر الجديد ليس هو نفسه القديم لتجنب الأخطاء
+        // دالة replaceWith ستقوم بنقل newDiv من أسفل القائمة إلى مكان oldDiv
+        if(oldDiv && newDiv !== oldDiv) {
+            oldDiv.replaceWith(newDiv);
+        }
+
         toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
     };
+
 
     // 5. زر الإعدادات المتقدمة
     div.querySelector('.btn-advanced-edit').onclick = () => window.openEditQModal(d.id, d);
@@ -1375,14 +1386,10 @@ el('file-import-others').onchange = () => {
     };
     reader.readAsText(file);
 };
-// ==========================================
-// 11. AI ASSISTANT INTEGRATION (GEMINI)
-// ==========================================
-
-// (تم حذف سطر GEMINI_API_KEY من هنا لأنه تم نقله للأعلى)
 
 /**
  * دالة عرض نافذة نتائج الذكاء الاصطناعي
+ * (محدثة: تعرض الصياغة المقترحة دائماً + الخيارات + الشرح)
  */
 function showAIResultModal(analysis, qData) { 
     const modal = document.getElementById('ai-modal');
@@ -1392,43 +1399,103 @@ function showAIResultModal(analysis, qData) {
     const suggestExp = document.getElementById('ai-suggested-exp');
     const applyBtn = document.getElementById('btn-apply-ai-fix');
     const correctionSection = document.getElementById('ai-correction-section');
+    
+    // --- قسم الخيارات المقترحة (إنشاء ديناميكي) ---
+    let optionsSection = document.getElementById('ai-options-section');
+    if (!optionsSection) {
+        const container = document.querySelector('#ai-modal .space-y-4');
+        if(container) {
+            optionsSection = document.createElement('div');
+            optionsSection.id = 'ai-options-section';
+            optionsSection.className = 'hidden space-y-2 fade-in border-t border-slate-700/50 pt-2';
+            optionsSection.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h4 class="text-xs text-purple-400 font-bold">🎯 خيارات مموهة مقترحة:</h4>
+                    <button id="btn-use-options" class="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded transition">استخدمها</button>
+                </div>
+                <div id="ai-options-list" class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 font-mono"></div>
+            `;
+            // إضافته قبل قسم الشرح
+            suggestExp.parentElement.parentElement.insertBefore(optionsSection, suggestExp.parentElement);
+        }
+    }
 
     // 1. تعبئة البيانات
     feedbackText.innerText = analysis.feedback;
-    suggestQ.value = analysis.correction || qData.question;
+    suggestQ.value = analysis.correction || qData.question; // عرض النص الجديد هنا
     suggestExp.value = analysis.suggested_explanation || qData.explanation || "";
 
-    // 2. ضبط الألوان والحالة
-    if (analysis.status.includes("سليم")) {
-        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
-        statusBadge.innerHTML = '<span class="material-symbols-rounded text-base">check_circle</span> السؤال سليم ولغته صحيحة';
-        correctionSection.classList.add('hidden');
+    // 2. معالجة الخيارات المقترحة
+    const optionsList = document.getElementById('ai-options-list');
+    const btnUseOptions = document.getElementById('btn-use-options');
+    
+    if (analysis.suggested_options && analysis.suggested_options.length > 0) {
+        optionsSection.classList.remove('hidden');
+        optionsList.innerHTML = analysis.suggested_options.map(opt => 
+            `<div class="bg-slate-800 p-2 rounded border border-slate-700 text-center truncate" title="${opt}">${opt}</div>`
+        ).join('');
+        
+        btnUseOptions.onclick = () => {
+            const currentCorrect = qData.options[qData.correctAnswer];
+            // تعيين الخيار الصحيح في مكانه
+            const inputCorrect = document.getElementById(`inline-opt-${qData.id}-${qData.correctAnswer}`);
+            if(inputCorrect) inputCorrect.value = currentCorrect;
+
+            // توزيع الخيارات الخاطئة
+            let distractorIndex = 0;
+            for(let i=0; i<4; i++) {
+                if(i !== qData.correctAnswer && analysis.suggested_options[distractorIndex]) {
+                    const inputWrong = document.getElementById(`inline-opt-${qData.id}-${i}`);
+                    if(inputWrong) {
+                        inputWrong.value = analysis.suggested_options[distractorIndex];
+                        // وميض بسيط
+                        inputWrong.parentElement.classList.add('ring-2', 'ring-purple-500/50');
+                        setTimeout(()=> inputWrong.parentElement.classList.remove('ring-2', 'ring-purple-500/50'), 1000);
+                    }
+                    distractorIndex++;
+                }
+            }
+            toast("تم تعبئة الخيارات المقترحة", "check_circle");
+        };
     } else {
-        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-amber-900/20 text-amber-500 border-amber-500/50";
-        statusBadge.innerHTML = '<span class="material-symbols-rounded text-base">warning</span> يحتاج إلى تحسينات';
-        correctionSection.classList.remove('hidden');
+        if(optionsSection) optionsSection.classList.add('hidden');
     }
 
-    // 3. برمجة زر "تطبيق التصحيحات"
+    // 3. ضبط الحالة والألوان (Badge Logic)
+    // ملاحظة: قمنا بفصل منطق ظهور حقل السؤال عن حالة "سليم"
+    if (analysis.status.includes("سليم") || analysis.status.includes("Sound")) {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
+        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">check_circle</span> تقييم السؤال: ${analysis.status}`;
+    } else {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-amber-900/20 text-amber-500 border-amber-500/50";
+        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">warning</span> ملاحظة: ${analysis.status}`;
+    }
+
+    // 4. إظهار قسم السؤال المقترح دائماً (وتغيير العنوان ليكون إيجابياً)
+    correctionSection.classList.remove('hidden');
+    const correctionLabel = correctionSection.querySelector('h4');
+    if(correctionLabel) correctionLabel.innerHTML = '✨ الصياغة البلاغية المقترحة:';
+
+    // 5. برمجة زر "تطبيق التصحيحات" (شامل)
     applyBtn.onclick = () => {
         const qInput = document.getElementById(`inline-q-${qData.id}`);
         const expInput = document.getElementById(`inline-exp-${qData.id}`);
 
         if (qInput) {
-            qInput.value = suggestQ.value;
+            qInput.value = suggestQ.value; // نأخذ القيمة من حقل الاقتراح
             qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
             setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1000);
         }
         
         if (expInput) {
-            expInput.value = suggestExp.value;
+            expInput.value = suggestExp.value; // نأخذ القيمة من حقل الشرح
             expInput.classList.add('border-green-500');
         }
 
         modal.classList.remove('active', 'flex');
         modal.classList.add('hidden');
         
-        toast("تم تطبيق المقترحات! اضغط 'حفظ' لتثبيتها", "check_circle");
+        toast("تم التطبيق! اضغط 'حفظ' لتثبيت التغييرات", "check_circle");
         
         const saveBtn = document.querySelector(`#q-row-${qData.id} .btn-quick-save`);
         if(saveBtn) {
@@ -1437,55 +1504,64 @@ function showAIResultModal(analysis, qData) {
         }
     };
 
+    // فتح المودال
     modal.classList.remove('hidden');
     modal.classList.add('flex', 'active');
     setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95'), 10);
 }
 
-/**
+
 /**
  * دالة فحص السؤال باستخدام الذكاء الاصطناعي
+ * (محدثة: تعيد صياغة السؤال، تولد خيارات، وشرح ديني دقيق من مصادر شيعية)
  */
 async function checkQuestionWithAI(questionData) {
+    // التحقق من وجود المكتبة
     if (!window.GoogleGenerativeAI) {
         return toast("مكتبة الذكاء الاصطناعي غير محملة! تأكد من تحديث الصفحة", "error");
     }
 
+    // تحديث حالة الأيقونة والنص
     const btnIcon = document.getElementById(`ai-icon-${questionData.id}`);
     const btnText = document.getElementById(`ai-text-${questionData.id}`);
     
     if(btnIcon) btnIcon.innerText = "hourglass_top";
-    if(btnText) btnText.innerText = "جاري الفحص...";
+    if(btnText) btnText.innerText = "جاري التحليل...";
 
     try {
         const genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
-        
-        // تعديل هام: استخدام الاسم الدقيق للإصدار 001 لتجنب خطأ 404
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        // نستخدم 1.5-flash لأنه سريع جداً وذكي كفاية لهذه المهمة
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
         const prompt = `
-            بصفتك خبيراً لغوياً ومدققاً للمحتوى الإسلامي، قم بمراجعة هذا السؤال المخصص لمسابقة ثقافية:
+            بصفتك باحثاً ومحققاً لغوياً في التراث الإسلامي الشيعي، ورجل دين مطلع.
+            
+            المهمة: تدقيق وتحسين سؤال لمسابقة ثقافية دينية.
+            
+            الضوابط الصارمة:
+            1. المصادر: الاعتماد على المصادر الشيعية المعتبرة (الكافي، من لا يحضره الفقيه، التهذيب، الاستبصار، بحار الأنوار، الإرشاد للمفيد، مقاتل الطالبيين).
+            2. الأسلوب: لغة عربية فصحى، رصينة، ومؤدبة.
 
-            --- بيانات السؤال ---
+            --- بيانات السؤال الحالية ---
             - نص السؤال: "${questionData.question}"
             - الخيارات: [${questionData.options.join(' - ')}]
-            - الإجابة الصحيحة المسجلة: "${questionData.options[questionData.correctAnswer]}"
-            - الشرح الإثرائي: "${questionData.explanation || 'لا يوجد'}"
-            - التصنيف: "${questionData.topic}"
+            - الإجابة الصحيحة الحالية: "${questionData.options[questionData.correctAnswer]}"
+            - الشرح الحالي: "${questionData.explanation || ''}"
             ---------------------
 
-            المطلوب منك بالتحديد:
-            1. التأكد من (صحة المعلومة) دينياً وتاريخياً.
-            2. مراجعة (اللغة والإملاء) بدقة.
-            3. التأكد من أن الإجابة الصحيحة المختارة هي الوحيدة الصحيحة ولا يوجد غموض.
-            4. إذا كان الشرح فارغاً، اقترح شرحاً مختصراً ومفيداً.
+            المطلوب منك إخراج ناتج بصيغة JSON فقط يحتوي على الحقول التالية بدقة:
 
-            أجبني بصيغة JSON فقط (بدون أي نصوص إضافية) بهذا الهيكل:
             {
-                "status": "سليم" (أو "يحتوي على مشاكل"),
-                "correction": "النص المقترح للسؤال بعد تصحيح الأخطاء (أعد كتابة السؤال كاملاً حتى لو كان صحيحاً)",
-                "suggested_explanation": "نص الشرح المحسن أو المقترح",
-                "feedback": "ملاحظاتك المختصرة جداً (مثلاً: خطأ إملائي في كلمة كذا، أو المعلومة غير دقيقة)"
+                "status": "سليم" (أو "ركيك" أو "يحتوي خطأ" أو "مبهم"),
+                
+                "correction": "قم بإعادة كتابة نص السؤال هنا ليكون بالفصحى البليغة جداً، واضحاً، ودقيقاً. (حتى لو كان السؤال الأصلي جيداً، حسّن أسلوبه البلاغي)",
+                
+                "suggested_explanation": "اكتب شرحاً إثرائياً (المعلومة الذهبية) يوضح الإجابة وسياقها. الشروط: أن يكون بأسلوب قصصي ديني جذاب (كأنه صادر من خطيب مفوه)، عدد الكلمات بين 5 إلى 150 كلمة، موثقاً ضمنياً بالمصادر الشيعية.",
+                
+                "feedback": "اشرح هنا لماذا قمت بتعديل السؤال (مثلاً: لتوضيح الغموض، أو لتصحيح خطأ لغوي، أو لأن المعلومة مشهورة/شاذة). قدم نصيحة للمعد.",
+                
+                "suggested_options": ["خيار خاطئ 1", "خيار خاطئ 2", "خيار خاطئ 3"] 
+                (اقترح 3 خيارات خاطئة جديدة تكون ذكية ومموهة جداً تشتت الانتباه بذكاء، ولا تضع الإجابة الصحيحة بينهم)
             }
         `;
 
@@ -1493,21 +1569,23 @@ async function checkQuestionWithAI(questionData) {
         const response = await result.response;
         const text = response.text();
         
+        // تنظيف النص من علامات الـ Markdown لضمان تحويله لـ JSON
         const cleanJson = text.replace(/```json|```/g, '').trim();
         const analysis = JSON.parse(cleanJson);
 
+        // عرض النتائج في النافذة
         showAIResultModal(analysis, questionData);
 
     } catch (error) {
         console.error("AI Error:", error);
         
-        // التعامل مع الخطأ 404 بشكل خاص لتقديم نصيحة للمستخدم
         if (error.message.includes('404') || error.message.includes('not found')) {
-            toast("موديل الذكاء الاصطناعي غير متوفر حالياً، جرب لاحقاً", "error");
+            toast("موديل الذكاء الاصطناعي غير متوفر، تأكد من المفتاح والموديل", "error");
         } else {
-            toast("حدث خطأ أثناء الاتصال بالمساعد الذكي", "error");
+            toast("حدث خطأ أثناء الاتصال: " + error.message.substring(0, 30), "error");
         }
     } finally {
+        // إعادة الزر لوضعه الطبيعي
         if(btnIcon) btnIcon.innerText = "smart_toy";
         if(btnText) btnText.innerText = "فحص AI";
     }

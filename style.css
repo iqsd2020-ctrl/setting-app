@@ -1,0 +1,194 @@
+/* =========================================
+   1. Base & Reset
+   ========================================= */
+:root {
+    --primary-gold: #d97706;
+    --primary-gold-hover: #b45309;
+    --bg-dark: #0f172a;
+    --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+    -webkit-tap-highlight-color: transparent; /* إزالة الوميض عند اللمس في الموبايل */
+}
+
+/* تحسين شريط التمرير (Scrollbar) ليكون رفيعاً وأنيقاً */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-gold);
+}
+
+/* فئة خاصة للمناطق التي تحتاج تمرير داخلي */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+}
+
+/* =========================================
+   2. Components & Utilities
+   ========================================= */
+
+/* Glassmorphism Effect - الزجاج */
+.glass {
+    background: rgba(30, 41, 59, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari support */
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Input Fields - حقول الإدخال */
+.input-box {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    color: #f1f5f9;
+    padding: 0.75rem 1rem;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.input-box:focus {
+    border-color: var(--primary-gold);
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+    background: rgba(15, 23, 42, 0.95);
+}
+
+.input-box:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #1e293b;
+}
+
+/* Custom Select Arrow - سهم القائمة المنسدلة */
+select.input-box {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23fbbf24' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: left 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em;
+    padding-left: 2.5rem; /* مساحة للسهم */
+}
+
+/* Golden Button - الزر الذهبي */
+.btn-gold {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: white;
+    transition: all 0.3s ease;
+    border: 1px solid #d97706;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-gold:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.btn-gold:active {
+    transform: translateY(0);
+}
+
+/* =========================================
+   3. Navigation (Sidebar)
+   ========================================= */
+.nav-item {
+    padding: 0.85rem 1.5rem;
+    color: #94a3b8;
+    cursor: pointer;
+    border-right: 3px solid transparent;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Reem Kufi', sans-serif;
+    margin-bottom: 0.25rem;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: white;
+}
+
+.nav-item.active {
+    background: linear-gradient(90deg, rgba(217, 119, 6, 0.15) 0%, transparent 100%);
+    color: #fbbf24;
+    border-right-color: #fbbf24;
+}
+
+/* =========================================
+   4. Cards & Lists
+   ========================================= */
+.admin-item { 
+    background: rgba(30, 41, 59, 0.6); 
+    border: 1px solid rgba(255,255,255,0.05); 
+    border-radius: 0.75rem; 
+    margin-bottom: 0.75rem; 
+    transition: all 0.2s ease-in-out; 
+    /* overflow: hidden; Removed to allow dropdowns if needed */
+}
+
+.admin-item:hover { 
+    transform: translateY(-2px); 
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(255,255,255,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+}
+
+/* =========================================
+   5. Animations
+   ========================================= */
+.fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+/* =========================================
+   6. Modal Transitions
+   ========================================= */
+/*
+   ملاحظة: يتم التحكم في الظهور والإخفاء عبر JavaScript
+   باستخدام فئات Tailwind (opacity-0, hidden, etc.)
+   لكن هذه الفئة تضمن سلاسة الحركة عند التفعيل
+*/
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+/* تحسينات خاصة للموبايل للطباعة والنصوص */
+@media (max-width: 640px) {
+    .input-box {
+        font-size: 16px; /* يمنع التكبير التلقائي في آيفون */
+    }
+}

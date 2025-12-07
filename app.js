@@ -9,10 +9,7 @@ import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, a
 import { topics, badgesMap, badgesData } from './data.js';
 
 // تعريف كائن Timestamp ليكون متاحاً عالمياً
-window.Timestamp = Timestamp;
-
-// ===> (تم النقل هنا) مفتاح API الخاص بالذكاء الاصطناعي <===
-const GEMINI_API_KEY = "AIzaSyAE1fkxt0RsTtzmLRnkHLfbAo3eEWDu6nI"; 
+window.Timestamp = Timestamp; 
 
 // إعدادات Firebase
 const firebaseConfig = { 
@@ -32,8 +29,11 @@ let isAuthReady = false;
 signInAnonymously(auth).then(() => { 
     isAuthReady = true; 
     console.log("Admin Auth Ready"); 
-    // ربط الأحداث بعد تأكد الاتصال
     bindEventHandlers();
+    setupAI();
+    // تحميل الصفحة الافتراضية مباشرة
+    loadStats();
+    triggerTab('view-dashboard');
 }).catch(e => console.error("Firebase Auth Error:", e));
 
 
@@ -75,25 +75,7 @@ const toast = (msg, icon = 'check_circle') => {
     }, 3000); 
 };
 
-// =========================================================
-// 3. AUTHENTICATION & INITIAL BINDING
-// =========================================================
 
-el('btn-login').onclick = () => { 
-    if(!isAuthReady) return el('login-msg').innerText = "جاري الاتصال..."; 
-    // الرمز السري هنا
-    if(el('admin-pin').value.replace(/[^0-9]/g, '') === '0000') { 
-        hide('login-screen'); 
-        show('dashboard-container'); 
-        triggerTab('view-dashboard'); // البدء من لوحة القيادة
-    } else { 
-        el('login-msg').innerText = "رمز خاطئ"; 
-        setTimeout(()=>el('login-msg').innerText='', 2000); 
-    } 
-};
-el('admin-pin').addEventListener('input', function (e) { 
-    this.value = this.value.replace(/[^0-9]/g, ''); 
-});
 
 // =========================================================
 // 4. NAVIGATION & UI HANDLERS
@@ -122,36 +104,27 @@ el('mobile-menu-btn').onclick = () => window.toggleAdminMenu(true);
 el('side-menu-overlay').onclick = () => window.toggleAdminMenu(false);
 
 
-/**
- * دالة التبديل بين الأقسام الرئيسية
- * @param {string} tabId - ID القسم المطلوب عرضه
- */
 window.triggerTab = (tabId) => {
-    // 1. تحديث القائمة الجانبية
     document.querySelectorAll('.nav-item').forEach(b => { 
         b.classList.remove('active'); 
         if(b.dataset.tab === tabId) b.classList.add('active'); 
     });
 
-    // 2. تبديل الصفحات
     document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
     show(tabId);
 
-    // 3. تحميل البيانات الخاصة بكل صفحة
     if(tabId === 'view-users') loadUsers();
     if(tabId === 'view-reports') loadReports();
-    if(tabId === 'view-manage') { 
-        el('qs-search-input').value=''; 
-        loadQuestions(false); 
-    }
+    if(tabId === 'view-manage') { el('qs-search-input').value=''; loadQuestions(false); }
     if(tabId === 'view-dashboard') loadStats();
-
-    // 4. إغلاق القائمة الجانبية بعد الاختيار (للموبايل)
-    window.toggleAdminMenu(false);
     
-    // العودة لأعلى الصفحة
+    // إضافة جديدة
+    if(tabId === 'view-ai-settings') loadAISettings();
+
+    window.toggleAdminMenu(false);
     el('main-view-area')?.scrollTo(0, 0);
 };
+
 
 document.querySelectorAll('.nav-item').forEach(btn => btn.onclick = () => window.triggerTab(btn.dataset.tab));
 document.querySelectorAll('.glass[data-target]').forEach(card => card.onclick = () => window.triggerTab(card.dataset.target));
@@ -929,8 +902,7 @@ function renderQuestionCard(d, container) {
     `;
 
 // 1. ربط زر الذكاء الاصطناعي
-div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d); // تم حذف 'window.'
-// ...
+div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d);
 
 
     // 2. زر الحفظ السريع
@@ -1511,17 +1483,20 @@ function showAIResultModal(analysis, qData) {
 }
 
 
-/**
- * دالة فحص السؤال باستخدام الذكاء الاصطناعي
- * (محدثة: تعيد صياغة السؤال، تولد خيارات، وشرح ديني دقيق من مصادر شيعية)
- */
 async function checkQuestionWithAI(questionData) {
-    // التحقق من وجود المكتبة
     if (!window.GoogleGenerativeAI) {
-        return toast("مكتبة الذكاء الاصطناعي غير محملة! تأكد من تحديث الصفحة", "error");
+        return toast("مكتبة الذكاء الاصطناعي غير محملة!", "error");
     }
 
-    // تحديث حالة الأيقونة والنص
+    const apiKey = localStorage.getItem('gemini_api_key');
+    const modelName = localStorage.getItem('gemini_model') || "gemini-1.5-flash";
+    const customInstructions = localStorage.getItem('gemini_custom_prompt') || "";
+
+    if (!apiKey) {
+        toast("يرجى ضبط مفتاح API من إعدادات AI أولاً", "settings");
+        return triggerTab('view-ai-settings');
+    }
+
     const btnIcon = document.getElementById(`ai-icon-${questionData.id}`);
     const btnText = document.getElementById(`ai-text-${questionData.id}`);
     
@@ -1529,18 +1504,18 @@ async function checkQuestionWithAI(questionData) {
     if(btnText) btnText.innerText = "جاري التحليل...";
 
     try {
-        const genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
-        // نستخدم 1.5-flash لأنه سريع جداً وذكي كفاية لهذه المهمة
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const genAI = new window.GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: modelName });
 
-               const prompt = `
+        const prompt = `
             بصفتك باحثاً ومحققاً لغوياً في التراث الإسلامي الشيعي وخبير انشاء مسابقات دينية.
             
             المهمة: تدقيق وتحسين سؤال لمسابقة ثقافية دينية.
             
             الضوابط الصارمة:
-            1. المصادر: الاعتماد على المصادر الشيعية المعتبرة (الكافي، من لا يحضره الفقيه، التهذيب، الاستبصار، بحار الأنوار، الإرشاد للمفيد، مقاتل الطالبيين، مؤلفات السيد محمد الصدر).
+            1. المصادر: الاعتماد على المصادر الشيعية المعتبرة.
             2. الأسلوب: لغة عربية فصحى، رصينة، ومؤدبة.
+            ${customInstructions ? `3. تعليمات إضافية هامة: ${customInstructions}` : ''}
 
             --- بيانات السؤال الحالية ---
             - نص السؤال: "${questionData.question}"
@@ -1549,44 +1524,90 @@ async function checkQuestionWithAI(questionData) {
             - الشرح الحالي: "${questionData.explanation || ''}"
             ---------------------
 
-            المطلوب منك إخراج ناتج بصيغة JSON فقط يحتوي على الحقول التالية بدقة:
-
+            المطلوب منك إخراج ناتج بصيغة JSON فقط (بدون أي نصوص markdown) يحتوي على:
             {
-                "status": "سليم" (أو "ركيك" أو "يحتوي خطأ" أو "مبهم"),
-                
-                "correction": "قم بإعادة كتابة نص السؤال هنا ليكون بالفصحى البليغة جداً، واضحاً، ودقيقاً. (حتى لو كان السؤال الأصلي جيداً، حسّن أسلوبه البلاغي)",
-                
-                "suggested_explanation": "اكتب شرحاً إثرائياً (المعلومة الذهبية) يوضح الإجابة وسياقها. الشروط: أن يكون بأسلوب ديني جذاب (كأنه نص من كتاب)، عدد الكلمات بين 5 إلى 150 كلمة، الاسلوب مفهوم للصغير والكبير والمبتدئ والمثقف.",
-                
-                "feedback": "اشرح هنا لماذا قمت بتعديل السؤال (مثلاً: لتوضيح الغموض، أو لتصحيح خطأ لغوي، أو لأن المعلومة مشهورة/شاذة). قدم نصيحة للمعد.",
-                
-                "suggested_options": ["خيار خاطئ 1", "خيار خاطئ 2", "خيار خاطئ 3"] 
-                (اقترح 3 خيارات خاطئة جديدة تكون ذكية ومموهة جداً تشتت الانتباه بذكاء، ولا تضع الإجابة الصحيحة بينهم)
+                "status": "سليم" | "ركيك" | "يحتوي خطأ" | "مبهم",
+                "correction": "نص السؤال المحسن",
+                "suggested_explanation": "شرح إثرائي دقيق وجذاب",
+                "feedback": "سبب التعديل والنصيحة",
+                "suggested_options": ["خيار خاطئ 1", "خيار خاطئ 2", "خيار خاطئ 3"]
             }
-        `;;
+        `;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         
-        // تنظيف النص من علامات الـ Markdown لضمان تحويله لـ JSON
         const cleanJson = text.replace(/```json|```/g, '').trim();
         const analysis = JSON.parse(cleanJson);
 
-        // عرض النتائج في النافذة
         showAIResultModal(analysis, questionData);
 
     } catch (error) {
         console.error("AI Error:", error);
-        
-        if (error.message.includes('404') || error.message.includes('not found')) {
-            toast("موديل الذكاء الاصطناعي غير متوفر، تأكد من المفتاح والموديل", "error");
+        if (error.message.includes('404')) {
+            toast("موديل الذكاء الاصطناعي غير صحيح", "error");
+        } else if (error.message.includes('400') || error.message.includes('Key')) {
+            toast("مفتاح API غير صالح", "error");
         } else {
-            toast("حدث خطأ أثناء الاتصال: " + error.message.substring(0, 30), "error");
+            toast("خطأ: " + error.message.substring(0, 30), "error");
         }
     } finally {
-        // إعادة الزر لوضعه الطبيعي
         if(btnIcon) btnIcon.innerText = "smart_toy";
         if(btnText) btnText.innerText = "فحص AI";
     }
+}
+
+// =========================================================
+// AI SETTINGS MANAGEMENT (FIXED)
+// =========================================================
+
+// دالة لتحميل الإعدادات للحقول
+function loadAISettings() {
+    console.log("Loading AI Settings...");
+    const key = localStorage.getItem('gemini_api_key');
+    const model = localStorage.getItem('gemini_model');
+    const prompt = localStorage.getItem('gemini_custom_prompt');
+
+    if(el('ai-api-key')) el('ai-api-key').value = key || '';
+    if(el('ai-model-name')) el('ai-model-name').value = model || 'gemini-1.5-flash';
+    if(el('ai-custom-prompt')) el('ai-custom-prompt').value = prompt || '';
+}
+
+// دالة لتهيئة الزر (يتم استدعاؤها في الأعلى)
+function setupAI() {
+    const saveBtn = el('btn-save-ai-settings');
+    
+    if (!saveBtn) {
+        console.error("Critical: Save AI Button not found in DOM!");
+        return;
+    }
+
+    // إزالة أي ارتباط سابق لتجنب التكرار
+    saveBtn.onclick = null;
+
+    saveBtn.onclick = () => {
+        console.log("Save button clicked!"); // للتأكد من الضغط
+        
+        const key = el('ai-api-key')?.value.trim();
+        const model = el('ai-model-name')?.value.trim();
+        const prompt = el('ai-custom-prompt')?.value.trim();
+
+        if(!key) {
+            toast("يرجى إدخال مفتاح API", "warning");
+            return;
+        }
+
+        try {
+            localStorage.setItem('gemini_api_key', key);
+            localStorage.setItem('gemini_model', model || 'gemini-1.5-flash');
+            localStorage.setItem('gemini_custom_prompt', prompt || '');
+            
+            console.log("Saved to LocalStorage:", { key: "***", model });
+            toast("تم حفظ إعدادات AI بنجاح ✅");
+        } catch (e) {
+            console.error("Storage Error:", e);
+            alert("تعذر الحفظ في المتصفح: " + e.message);
+        }
+    };
 }

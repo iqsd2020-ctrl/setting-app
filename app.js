@@ -827,150 +827,6 @@ async function loadQuestions(loadMore = false) {
     isFetchingQs = false;
 }
 
-/**
-/**
- * دالة عرض بطاقة السؤال (محدثة مع زر الذكاء الاصطناعي)
- */
-function renderQuestionCard(d, container) {
-    const div = document.createElement('div');
-    div.id = `q-row-${d.id}`;
-    const isReviewed = d.isReviewed === true;
-    const borderClass = isReviewed ? 'border-slate-700/50' : 'border-amber-500/50 border-dashed';
-    const bgClass = isReviewed ? 'bg-slate-800/40' : 'bg-amber-900/10';
-    
-    div.className = `admin-item ${bgClass} ${borderClass} fade-in relative transition-all duration-300 group p-0 overflow-visible`;
-
-    const correctIdx = d.correctAnswer !== undefined ? d.correctAnswer : -1;
-
-    let optionsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">';
-    d.options.forEach((opt, i) => {
-        const isCorrect = i === correctIdx;
-        const activeClass = isCorrect ? 'border-green-500/50 bg-green-900/10' : 'border-slate-700/50 bg-slate-900/30';
-        optionsHtml += `
-            <div class="flex items-center gap-2 p-1.5 rounded border ${activeClass} transition-colors focus-within:border-blue-500">
-                <input type="radio" name="rad-${d.id}" value="${i}" ${isCorrect ? 'checked' : ''} class="accent-green-500 w-4 h-4 cursor-pointer shrink-0">
-                <input type="text" id="inline-opt-${d.id}-${i}" class="bg-transparent text-xs text-slate-300 w-full outline-none focus:text-white font-mono" value="${opt || ''}" placeholder="الخيار ${i+1}">
-            </div>
-        `;
-    });
-    optionsHtml += '</div>';
-
-    const statusBadge = isReviewed 
-        ? `<span class="text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30 flex items-center gap-1"><span class="material-symbols-rounded text-sm">verified</span> معتمد</span>`
-        : `<span class="text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1"><span class="material-symbols-rounded text-sm">hourglass_empty</span> مراجعة</span>`;
-
-    div.innerHTML = `
-        <div class="flex justify-between items-center bg-slate-900/30 p-2 border-b border-slate-700/50 rounded-t-xl">
-            <div class="flex items-center gap-2">
-                ${statusBadge}
-                <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">${d.topic}</span>
-                <span class="text-[10px] text-slate-600 font-mono hidden md:inline">${d.id}</span>
-            </div>
-            <button class="text-slate-500 hover:text-white transition btn-advanced-edit" title="تعديل التصنيف والمتقدم">
-                <span class="material-symbols-rounded text-lg">settings</span>
-            </button>
-        </div>
-
-        <div class="p-3">
-            <div class="mb-3">
-                <input type="text" id="inline-q-${d.id}" class="w-full bg-transparent text-white font-bold text-sm border-b border-slate-700 focus:border-amber-500 outline-none pb-1 transition-colors" value="${d.question}" placeholder="نص السؤال...">
-            </div>
-            ${optionsHtml}
-            <div class="relative">
-                <span class="absolute right-2 top-2 text-[10px] text-slate-500 select-none">💡 إثراء</span>
-                <textarea id="inline-exp-${d.id}" class="w-full bg-slate-900/50 text-xs text-blue-200 border border-slate-700/50 rounded p-2 pt-6 outline-none focus:border-blue-500 min-h-[60px] resize-y" placeholder="معلومة إثرائية تظهر بعد الإجابة...">${d.explanation || ''}</textarea>
-            </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2 justify-end border-t border-slate-700/50 p-2 bg-slate-900/20 rounded-b-xl">
-            <button class="text-xs text-indigo-400 hover:bg-indigo-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-ai-check border border-indigo-500/20">
-                <span id="ai-icon-${d.id}" class="material-symbols-rounded text-sm">smart_toy</span> 
-                <span id="ai-text-${d.id}">فحص AI</span>
-            </button>
-            
-            <div class="w-[1px] h-6 bg-slate-700 mx-1"></div> 
-
-            <button class="text-xs ${isReviewed ? 'text-slate-400' : 'text-green-400'} hover:bg-slate-700 px-3 py-1.5 rounded transition flex items-center gap-1 btn-toggle-review opacity-70 hover:opacity-100">
-                <span class="material-symbols-rounded text-sm">${isReviewed ? 'unpublished' : 'check_circle'}</span> ${isReviewed ? 'إلغاء' : 'اعتماد'}
-            </button>
-            <button class="text-xs text-red-400 hover:bg-red-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-del-q opacity-70 hover:opacity-100"><span class="material-symbols-rounded text-sm">delete</span> حذف</button>
-            
-            <button class="text-xs text-white bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded shadow-lg transition flex items-center gap-1 btn-quick-save font-bold mr-auto md:mr-0">
-                <span class="material-symbols-rounded text-sm">save</span> حفظ
-            </button>
-        </div>
-    `;
-
-// 1. ربط زر الذكاء الاصطناعي
-div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d);
-
-
-    // 2. زر الحفظ السريع
-    div.querySelector('.btn-quick-save').onclick = async () => {
-        const newQ = el(`inline-q-${d.id}`).value;
-        const newExp = el(`inline-exp-${d.id}`).value;
-        const options = [el(`inline-opt-${d.id}-0`).value, el(`inline-opt-${d.id}-1`).value, el(`inline-opt-${d.id}-2`).value, el(`inline-opt-${d.id}-3`).value];
-        const checkedRadio = div.querySelector(`input[name="rad-${d.id}"]:checked`);
-        const newCorrect = checkedRadio ? parseInt(checkedRadio.value) : 0;
-
-        if(!newQ || !options[0] || !options[1]) return toast("يرجى ملء السؤال والخيارات الأساسية", "warning");
-
-        const btn = div.querySelector('.btn-quick-save');
-        btn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span>';
-        
-        try {
-            await updateDoc(doc(db, "questions", d.id), {
-                question: newQ,
-                options: options,
-                correctAnswer: newCorrect,
-                explanation: newExp
-            });
-            toast("تم حفظ التعديلات ✅");
-            btn.innerHTML = '<span class="material-symbols-rounded text-sm">save</span> حفظ';
-            div.classList.add('ring-2', 'ring-blue-500');
-            setTimeout(() => div.classList.remove('ring-2', 'ring-blue-500'), 500);
-        } catch(e) {
-            console.error(e);
-            toast("خطأ في الحفظ", "error");
-            btn.innerHTML = '<span class="material-symbols-rounded text-sm">save</span> حفظ';
-        }
-    };
-
-    // 3. زر الحذف
-    div.querySelector('.btn-del-q').onclick = async () => { if(confirm("حذف السؤال نهائياً؟")) { await deleteDoc(doc(db,"questions",d.id)); div.remove(); toast("تم الحذف","delete"); } };
-    
-    // 4. زر تبديل الحالة
-        // 4. زر تبديل الحالة
-    div.querySelector('.btn-toggle-review').onclick = async () => {
-        const newStatus = !d.isReviewed;
-        // تحديث قاعدة البيانات
-        await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
-        d.isReviewed = newStatus;
-
-        // التصحيح: استدعاء الدالة مباشرة بدون .then
-        // الدالة ستقوم بإنشاء العنصر وإضافته لنهاية القائمة (append)
-        const newDiv = renderQuestionCard(d, container);
-
-        // نحن نريد وضعه مكان العنصر القديم وليس في النهاية
-        const oldDiv = document.getElementById(`q-row-${d.id}`);
-        
-        // التحقق من أن العنصر الجديد ليس هو نفسه القديم لتجنب الأخطاء
-        // دالة replaceWith ستقوم بنقل newDiv من أسفل القائمة إلى مكان oldDiv
-        if(oldDiv && newDiv !== oldDiv) {
-            oldDiv.replaceWith(newDiv);
-        }
-
-        toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
-    };
-
-
-    // 5. زر الإعدادات المتقدمة
-    div.querySelector('.btn-advanced-edit').onclick = () => window.openEditQModal(d.id, d);
-
-    container.appendChild(div);
-    return div;
-}
-
 
 /**
  * فتح وتعبئة بيانات نافذة تعديل السؤال المتقدمة
@@ -1359,10 +1215,173 @@ el('file-import-others').onchange = () => {
     reader.readAsText(file);
 };
 
-/**
- * دالة عرض نافذة نتائج الذكاء الاصطناعي
- * (محدثة: تعرض الصياغة المقترحة دائماً + الخيارات + الشرح)
- */
+function renderQuestionCard(d, container) {
+    const div = document.createElement('div');
+    div.id = `q-row-${d.id}`;
+    const isReviewed = d.isReviewed === true;
+    const borderClass = isReviewed ? 'border-slate-700/50' : 'border-amber-500/50 border-dashed';
+    const bgClass = isReviewed ? 'bg-slate-800/40' : 'bg-amber-900/10';
+    
+    div.className = `admin-item ${bgClass} ${borderClass} fade-in relative transition-all duration-300 group p-0 overflow-visible`;
+
+    const correctIdx = d.correctAnswer !== undefined ? d.correctAnswer : -1;
+
+    let optionsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">';
+    d.options.forEach((opt, i) => {
+        const isCorrect = i === correctIdx;
+        const activeClass = isCorrect ? 'border-green-500/50 bg-green-900/10' : 'border-slate-700/50 bg-slate-900/30';
+        optionsHtml += `
+            <div class="flex items-center gap-2 p-1.5 rounded border ${activeClass} transition-colors focus-within:border-blue-500">
+                <input type="radio" name="rad-${d.id}" value="${i}" ${isCorrect ? 'checked' : ''} class="accent-green-500 w-4 h-4 cursor-pointer shrink-0">
+                <input type="text" id="inline-opt-${d.id}-${i}" class="bg-transparent text-xs text-slate-300 w-full outline-none focus:text-white font-mono" value="${opt || ''}" placeholder="الخيار ${i+1}">
+            </div>
+        `;
+    });
+    optionsHtml += '</div>';
+
+    const statusBadge = isReviewed 
+        ? `<span class="text-[10px] text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/30 flex items-center gap-1"><span class="material-symbols-rounded text-sm">verified</span> معتمد</span>`
+        : `<span class="text-[10px] text-amber-500 bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1"><span class="material-symbols-rounded text-sm">hourglass_empty</span> مراجعة</span>`;
+
+    div.innerHTML = `
+        <div class="flex justify-between items-center bg-slate-900/30 p-2 border-b border-slate-700/50 rounded-t-xl">
+            <div class="flex items-center gap-2">
+                ${statusBadge}
+                <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">${d.topic}</span>
+                <span class="text-[10px] text-slate-600 font-mono hidden md:inline">${d.id}</span>
+            </div>
+            <button class="text-slate-500 hover:text-white transition btn-advanced-edit" title="تعديل التصنيف والمتقدم">
+                <span class="material-symbols-rounded text-lg">settings</span>
+            </button>
+        </div>
+
+        <div class="p-3">
+            <div class="mb-3">
+                <input type="text" id="inline-q-${d.id}" class="w-full bg-transparent text-white font-bold text-sm border-b border-slate-700 focus:border-amber-500 outline-none pb-1 transition-colors" value="${d.question}" placeholder="نص السؤال...">
+            </div>
+            ${optionsHtml}
+            <div class="relative">
+                <span class="absolute right-2 top-2 text-[10px] text-slate-500 select-none">💡 إثراء</span>
+                <textarea id="inline-exp-${d.id}" class="w-full bg-slate-900/50 text-xs text-blue-200 border border-slate-700/50 rounded p-2 pt-6 outline-none focus:border-blue-500 min-h-[60px] resize-y" placeholder="معلومة إثرائية تظهر بعد الإجابة...">${d.explanation || ''}</textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 justify-end border-t border-slate-700/50 p-2 bg-slate-900/20 rounded-b-xl">
+            <button class="text-xs text-indigo-400 hover:bg-indigo-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-ai-check border border-indigo-500/20">
+                <span id="ai-icon-${d.id}" class="material-symbols-rounded text-sm">smart_toy</span> 
+                <span id="ai-text-${d.id}">فحص AI</span>
+            </button>
+            
+            <div class="w-[1px] h-6 bg-slate-700 mx-1"></div> 
+
+            <button class="text-xs ${isReviewed ? 'text-slate-400' : 'text-green-400'} hover:bg-slate-700 px-3 py-1.5 rounded transition flex items-center gap-1 btn-toggle-review opacity-70 hover:opacity-100">
+                <span class="material-symbols-rounded text-sm">${isReviewed ? 'unpublished' : 'check_circle'}</span> ${isReviewed ? 'إلغاء' : 'اعتماد'}
+            </button>
+            <button class="text-xs text-red-400 hover:bg-red-900/20 px-3 py-1.5 rounded transition flex items-center gap-1 btn-del-q opacity-70 hover:opacity-100"><span class="material-symbols-rounded text-sm">delete</span> حذف</button>
+            
+            <button class="text-xs text-white bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded shadow-lg transition flex items-center gap-1 btn-quick-save font-bold mr-auto md:mr-0">
+                <span class="material-symbols-rounded text-sm">save</span> حفظ
+            </button>
+        </div>
+    `;
+
+    div.querySelector('.btn-quick-save').onclick = async () => {
+        const btn = div.querySelector('.btn-quick-save');
+        const originalText = '<span class="material-symbols-rounded text-sm">save</span> حفظ';
+        
+        const qInput = document.getElementById(`inline-q-${d.id}`);
+        const expInput = document.getElementById(`inline-exp-${d.id}`);
+        const optInputs = [
+            document.getElementById(`inline-opt-${d.id}-0`),
+            document.getElementById(`inline-opt-${d.id}-1`),
+            document.getElementById(`inline-opt-${d.id}-2`),
+            document.getElementById(`inline-opt-${d.id}-3`)
+        ];
+        
+        const checkedRadio = div.querySelector(`input[name="rad-${d.id}"]:checked`);
+        
+        const newQ = qInput ? qInput.value.trim() : d.question;
+        const newExp = expInput ? expInput.value.trim() : "";
+        const newOptions = optInputs.map(input => input ? input.value.trim() : "");
+        const newCorrect = checkedRadio ? parseInt(checkedRadio.value) : (d.correctAnswer || 0);
+
+        if(!newQ || !newOptions[0] || !newOptions[1]) {
+            return toast("يرجى ملء السؤال والخيارات الأساسية", "warning");
+        }
+
+        btn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span>';
+        btn.disabled = true;
+
+        try {
+            await updateDoc(doc(db, "questions", d.id), {
+                question: newQ,
+                options: newOptions,
+                correctAnswer: newCorrect,
+                explanation: newExp
+            });
+
+            d.question = newQ;
+            d.options = newOptions;
+            d.correctAnswer = newCorrect;
+            d.explanation = newExp;
+
+            toast("تم حفظ التعديلات في قاعدة البيانات ✅", "save");
+            div.classList.add('ring-2', 'ring-blue-500');
+            setTimeout(() => div.classList.remove('ring-2', 'ring-blue-500'), 1000);
+
+        } catch(e) {
+            console.error("Save Error:", e);
+            toast("فشل الحفظ: " + e.message, "error");
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
+
+    div.querySelector('.btn-ai-check').onclick = () => checkQuestionWithAI(d);
+
+    div.querySelector('.btn-del-q').onclick = async () => { 
+        if(confirm("حذف السؤال نهائياً؟")) { 
+            await deleteDoc(doc(db,"questions",d.id)); 
+            div.remove(); 
+            toast("تم الحذف","delete"); 
+        } 
+    };
+    
+    div.querySelector('.btn-toggle-review').onclick = async () => {
+        const btn = div.querySelector('.btn-toggle-review');
+        btn.innerHTML = '...'; 
+        
+        const newStatus = !d.isReviewed;
+        await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
+        d.isReviewed = newStatus;
+        
+        const currentFilter = document.getElementById('manage-status-filter').value;
+        
+        if (currentFilter === 'unreviewed' && newStatus === true) {
+            div.style.transition = "all 0.5s ease";
+            div.style.opacity = '0';
+            div.style.transform = 'translateX(-50px)';
+            setTimeout(() => {
+                div.remove();
+                const countEl = document.getElementById('qs-counter');
+                if(countEl) countEl.innerText = document.querySelectorAll('#questions-grid .admin-item').length;
+                toast("تم الاعتماد وإزالة السؤال من القائمة 🚀");
+            }, 500);
+        } else {
+            const newDiv = renderQuestionCard(d, container);
+            const oldDiv = document.getElementById(`q-row-${d.id}`);
+            if(oldDiv && newDiv !== oldDiv) oldDiv.replaceWith(newDiv);
+            toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
+        }
+    };
+
+    div.querySelector('.btn-advanced-edit').onclick = () => window.openEditQModal(d.id, d);
+
+    container.appendChild(div);
+    return div;
+}
+
 function showAIResultModal(analysis, qData) { 
     const modal = document.getElementById('ai-modal');
     const statusBadge = document.getElementById('ai-status-badge');
@@ -1372,7 +1391,7 @@ function showAIResultModal(analysis, qData) {
     const applyBtn = document.getElementById('btn-apply-ai-fix');
     const correctionSection = document.getElementById('ai-correction-section');
     
-    // --- قسم الخيارات المقترحة (إنشاء ديناميكي) ---
+    // --- قسم الخيارات المقترحة ---
     let optionsSection = document.getElementById('ai-options-section');
     if (!optionsSection) {
         const container = document.querySelector('#ai-modal .space-y-4');
@@ -1387,14 +1406,13 @@ function showAIResultModal(analysis, qData) {
                 </div>
                 <div id="ai-options-list" class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 font-mono"></div>
             `;
-            // إضافته قبل قسم الشرح
             suggestExp.parentElement.parentElement.insertBefore(optionsSection, suggestExp.parentElement);
         }
     }
 
     // 1. تعبئة البيانات
     feedbackText.innerText = analysis.feedback;
-    suggestQ.value = analysis.correction || qData.question; // عرض النص الجديد هنا
+    suggestQ.value = analysis.correction || qData.question;
     suggestExp.value = analysis.suggested_explanation || qData.explanation || "";
 
     // 2. معالجة الخيارات المقترحة
@@ -1409,32 +1427,28 @@ function showAIResultModal(analysis, qData) {
         
         btnUseOptions.onclick = () => {
             const currentCorrect = qData.options[qData.correctAnswer];
-            // تعيين الخيار الصحيح في مكانه
             const inputCorrect = document.getElementById(`inline-opt-${qData.id}-${qData.correctAnswer}`);
             if(inputCorrect) inputCorrect.value = currentCorrect;
 
-            // توزيع الخيارات الخاطئة
             let distractorIndex = 0;
             for(let i=0; i<4; i++) {
                 if(i !== qData.correctAnswer && analysis.suggested_options[distractorIndex]) {
                     const inputWrong = document.getElementById(`inline-opt-${qData.id}-${i}`);
                     if(inputWrong) {
                         inputWrong.value = analysis.suggested_options[distractorIndex];
-                        // وميض بسيط
                         inputWrong.parentElement.classList.add('ring-2', 'ring-purple-500/50');
                         setTimeout(()=> inputWrong.parentElement.classList.remove('ring-2', 'ring-purple-500/50'), 1000);
                     }
                     distractorIndex++;
                 }
             }
-            toast("تم تعبئة الخيارات المقترحة", "check_circle");
+            toast("تم تعبئة الخيارات (اضغط حفظ لتثبيتها)", "check_circle");
         };
     } else {
         if(optionsSection) optionsSection.classList.add('hidden');
     }
 
-    // 3. ضبط الحالة والألوان (Badge Logic)
-    // ملاحظة: قمنا بفصل منطق ظهور حقل السؤال عن حالة "سليم"
+    // 3. ضبط الحالة والألوان
     if (analysis.status.includes("سليم") || analysis.status.includes("Sound")) {
         statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
         statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">check_circle</span> تقييم السؤال: ${analysis.status}`;
@@ -1443,40 +1457,54 @@ function showAIResultModal(analysis, qData) {
         statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">warning</span> ملاحظة: ${analysis.status}`;
     }
 
-    // 4. إظهار قسم السؤال المقترح دائماً (وتغيير العنوان ليكون إيجابياً)
     correctionSection.classList.remove('hidden');
     const correctionLabel = correctionSection.querySelector('h4');
     if(correctionLabel) correctionLabel.innerHTML = '✨ الصياغة البلاغية المقترحة:';
 
-    // 5. برمجة زر "تطبيق التصحيحات" (شامل)
-    applyBtn.onclick = () => {
-        const qInput = document.getElementById(`inline-q-${qData.id}`);
-        const expInput = document.getElementById(`inline-exp-${qData.id}`);
+    // 4. برمجة زر التطبيق (التعديل الجوهري هنا: حفظ في قاعدة البيانات)
+    applyBtn.onclick = async () => {
+        const originalText = applyBtn.innerHTML;
+        applyBtn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري الحفظ...`;
+        applyBtn.disabled = true;
 
-        if (qInput) {
-            qInput.value = suggestQ.value; // نأخذ القيمة من حقل الاقتراح
-            qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
-            setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1000);
-        }
-        
-        if (expInput) {
-            expInput.value = suggestExp.value; // نأخذ القيمة من حقل الشرح
-            expInput.classList.add('border-green-500');
-        }
+        try {
+            const newQ = suggestQ.value;
+            const newExp = suggestExp.value;
 
-        modal.classList.remove('active', 'flex');
-        modal.classList.add('hidden');
-        
-        toast("تم التطبيق! اضغط 'حفظ' لتثبيت التغييرات", "check_circle");
-        
-        const saveBtn = document.querySelector(`#q-row-${qData.id} .btn-quick-save`);
-        if(saveBtn) {
-            saveBtn.classList.add('animate-pulse', 'bg-green-600');
-            setTimeout(()=> saveBtn.classList.remove('animate-pulse', 'bg-green-600'), 2000);
+            // تحديث قاعدة البيانات مباشرة
+            await updateDoc(doc(db, "questions", qData.id), { 
+                question: newQ,
+                explanation: newExp
+            });
+
+            // تحديث الواجهة
+            const qInput = document.getElementById(`inline-q-${qData.id}`);
+            const expInput = document.getElementById(`inline-exp-${qData.id}`);
+
+            if (qInput) {
+                qInput.value = newQ;
+                qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
+                setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1500);
+            }
+            if (expInput) {
+                expInput.value = newExp;
+                expInput.classList.add('border-green-500');
+            }
+
+            modal.classList.remove('active', 'flex');
+            modal.classList.add('hidden');
+            
+            toast("تم تطبيق التعديلات وحفظها في قاعدة البيانات ✅", "save");
+
+        } catch (e) {
+            console.error(e);
+            toast("حدث خطأ أثناء الحفظ التلقائي", "error");
+        } finally {
+            applyBtn.innerHTML = originalText;
+            applyBtn.disabled = false;
         }
     };
 
-    // فتح المودال
     modal.classList.remove('hidden');
     modal.classList.add('flex', 'active');
     setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95'), 10);

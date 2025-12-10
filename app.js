@@ -328,125 +328,258 @@ let currentUserEditId = null;
 
 async function loadUsers() {
     const grid = el('users-grid'); 
-    grid.innerHTML = '<div class="text-center py-8"><span class="material-symbols-rounded spinner text-amber-500 text-3xl">sync</span></div>';
+    grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-10"; // تصميم الشبكة
+    grid.innerHTML = '<div class="col-span-full text-center py-12"><span class="material-symbols-rounded spinner text-amber-500 text-4xl">sync</span></div>';
+    
     const term = el('user-search').value.toLowerCase();
     
     try {
-        const snap = await getDocs(query(collection(db, "users"), orderBy("highScore", "desc"), limit(50)));
-        grid.innerHTML = '';
+        // ✅ التعديل هنا: الترتيب حسب stats.totalCorrect تنازلياً
+        const snap = await getDocs(query(collection(db, "users"), orderBy("stats.totalCorrect", "desc"), limit(50)));
         
-        snap.forEach(d => {
+        grid.innerHTML = '';
+        const docs = snap.docs;
+
+        docs.forEach((d, index) => {
             const u = d.data();
             if(term && !u.username?.toLowerCase().includes(term) && !d.id.includes(term)) return;
             
             const displayName = u.username || 'ضيف';
             const stats = u.stats || {};
-            
+            const totalCorrect = stats.totalCorrect || 0; // تخزين الرقم لاستخدامه
+
             // --- عرض الأوسمة ---
             let badgesHtml = '';
             if (u.badges && Array.isArray(u.badges) && u.badges.length > 0) {
-                badgesHtml = '<div class="flex flex-wrap gap-1 mt-2">';
-                u.badges.slice(0, 5).forEach(bId => {
+                badgesHtml = '<div class="flex flex-wrap gap-1 mt-3">';
+                u.badges.slice(0, 4).forEach(bId => {
                     const baseId = bId.split('_lvl')[0];
                     const badgeInfo = badgesMap[baseId];
                     const badgeName = badgeInfo ? badgeInfo.name : baseId; 
                     const lvlMatch = bId.match(/lvl(\d+)/);
-                    const lvl = lvlMatch ? lvlMatch[1] : '?';
+                    const lvl = lvlMatch ? lvlMatch[1] : '';
                     
-                    let colorClass = "bg-slate-700 text-slate-300";
-                    if(lvl == '3') colorClass = "bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                    if(lvl == '4') colorClass = "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30";
-                    if(lvl == '5') colorClass = "bg-red-500/20 text-red-400 border border-red-500/30";
+                    let style = "bg-slate-700/50 text-slate-300 border-slate-600";
+                    if(lvl == '3') style = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                    if(lvl == '4') style = "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
+                    if(lvl == '5') style = "bg-red-500/10 text-red-400 border-red-500/20";
 
-                    badgesHtml += `<span class="${colorClass} text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1" title="${bId}">${badgeName} <span class="text-[8px] opacity-70">${lvl}</span></span>`;
+                    badgesHtml += `<span class="${style} border text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1">${badgeName} <span class="text-[8px] opacity-60">${lvl?'v'+lvl:''}</span></span>`;
                 });
-                if(u.badges.length > 5) badgesHtml += `<span class="text-[9px] text-slate-500 px-1">+${u.badges.length - 5}</span>`;
+                if(u.badges.length > 4) badgesHtml += `<span class="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">+${u.badges.length - 4}</span>`;
                 badgesHtml += '</div>';
             } else {
-                badgesHtml = '<div class="text-[10px] text-slate-600 mt-1">لا توجد أوسمة</div>';
+                badgesHtml = '<div class="text-[10px] text-slate-600 mt-3 flex items-center gap-1 opacity-50"><span class="material-symbols-rounded text-sm">hotel_class</span> لا توجد أوسمة</div>';
             }
             
             const div = document.createElement('div');
-            div.className = `admin-item flex flex-col md:flex-row items-start md:items-center gap-3 w-full ${u.isBanned?'bg-red-900/10 border-red-500/30':''}`;
+            div.className = `relative group glass rounded-2xl overflow-hidden border border-slate-700/50 hover:border-amber-500/30 transition-all duration-300 hover:-translate-y-1 ${u.isBanned ? 'grayscale opacity-75' : ''}`;
             
-            let av = `<span class="material-symbols-rounded text-xl text-slate-400">person</span>`;
-            if(u.customAvatar) av = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`;
+            let av = `<span class="material-symbols-rounded text-3xl text-slate-500">person</span>`;
+            if(u.customAvatar) av = `<img src="${u.customAvatar}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">`;
             
+            let bannerColor = "from-slate-800 to-slate-900"; 
+            let rankIcon = `<span class="text-slate-600 font-mono text-xs">#${index + 1}</span>`;
+            
+            if(index === 0) { bannerColor = "from-amber-600/20 to-amber-900/40"; rankIcon = "🥇"; }
+            else if(index === 1) { bannerColor = "from-slate-400/20 to-slate-600/40"; rankIcon = "🥈"; }
+            else if(index === 2) { bannerColor = "from-orange-700/20 to-orange-900/40"; rankIcon = "🥉"; }
+            if(u.isBanned) bannerColor = "from-red-900/50 to-red-950/80";
+
             div.innerHTML = `
-                <div class="flex items-center gap-3 w-full md:w-auto flex-1 min-w-0">
-                    <div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600 shrink-0">${av}</div>
-                    <div class="min-w-0 flex-1">
-                        <div class="font-bold text-white truncate flex items-center gap-2">
-                            ${displayName} 
-                            ${u.isBanned ? '<span class="text-[9px] bg-red-500 text-white px-1 rounded">محظور</span>' : ''}
-                        </div>
-                        <div class="text-[10px] text-slate-500 font-mono select-all truncate">${d.id}</div>
-                        ${badgesHtml}
-                    </div>
+                <div class="h-20 bg-gradient-to-r ${bannerColor} relative">
+                    <div class="absolute top-2 right-3 text-lg drop-shadow-md">${rankIcon}</div>
+                    ${u.isBanned ? '<div class="absolute top-2 left-2 bg-red-600/90 text-white text-[9px] px-2 py-0.5 rounded shadow-sm font-bold">محظور 🚫</div>' : ''}
                 </div>
-                <div class="flex items-center justify-between w-full md:w-auto gap-4 pl-2 pt-2 md:pt-0 border-t md:border-0 border-slate-700/50 mt-2 md:mt-0">
-                    <div class="text-center px-2">
-                        <div class="text-[9px] text-slate-400">النقاط</div>
-                        <div class="text-amber-500 font-bold font-mono text-sm">${u.highScore||0}</div>
+                
+                <div class="px-5 pb-4 -mt-10 relative">
+                    <div class="flex justify-between items-end">
+                        <div class="w-20 h-20 rounded-2xl bg-slate-800 border-4 border-[#1e293b] shadow-xl flex items-center justify-center overflow-hidden relative group-hover:shadow-amber-500/10 transition-shadow">
+                            ${av}
+                        </div>
+                        <button class="btn-edit-user bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white w-10 h-10 rounded-xl border border-slate-700 hover:border-blue-500 transition shadow-lg flex items-center justify-center mb-1">
+                            <span class="material-symbols-rounded text-lg">edit_note</span>
+                        </button>
                     </div>
-                    <div class="text-center px-2 border-r border-slate-700">
-                        <div class="text-[9px] text-slate-400">الأسبوع</div>
-                        <div class="text-green-400 font-bold font-mono text-sm">${u.weeklyStats?.correct || 0}</div>
+                    
+                    <div class="mt-3">
+                        <h3 class="text-white font-bold text-lg truncate leading-tight">${displayName}</h3>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-[10px] text-slate-500 font-mono select-all bg-slate-900/50 px-1.5 rounded border border-slate-800 truncate max-w-[120px]">${d.id}</p>
+                        </div>
                     </div>
-                    <button class="bg-slate-700 hover:bg-blue-600 p-2 rounded-lg text-white btn-edit-user transition shrink-0"><span class="material-symbols-rounded">settings</span></button>
+
+                    <div class="grid grid-cols-3 gap-1 mt-4 bg-slate-900/40 p-2 rounded-xl border border-slate-700/30">
+                        <div class="text-center relative">
+                            <div class="absolute -top-1 right-0 w-full h-0.5 bg-green-500/50 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                            <div class="text-[9px] text-green-400 mb-0.5 flex items-center justify-center gap-1 font-bold">✅ صحيحة</div>
+                            <div class="text-white font-bold font-mono text-sm">${totalCorrect}</div>
+                        </div>
+                        <div class="text-center border-r border-slate-700/30">
+                            <div class="text-[9px] text-slate-400 mb-0.5">النقاط</div>
+                            <div class="text-amber-500 font-bold font-mono text-sm">${u.highScore?.toLocaleString() || 0}</div>
+                        </div>
+                        <div class="text-center border-r border-slate-700/30">
+                            <div class="text-[9px] text-slate-400 mb-0.5">لعب</div>
+                            <div class="text-blue-400 font-bold font-mono text-sm">${stats.quizzesPlayed || 0}</div>
+                        </div>
+                    </div>
+
+                    ${badgesHtml}
                 </div>
             `;
             
             div.querySelector('.btn-edit-user').onclick = () => openEditUserModal(d.id, u, stats);
             grid.appendChild(div);
         });
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        // رسالة تنبيه في حال طلب Firebase إنشاء فهرس (Index)
+        if(e.message.includes("index")) {
+            grid.innerHTML = `<div class="col-span-full text-center text-red-400 p-4 border border-red-500/30 bg-red-900/10 rounded-xl">⚠️ يتطلب هذا الترتيب فهرساً (Index) في Firebase.<br><a href="${e.message.match(/https?:\/\/[^\s]+/)[0]}" target="_blank" class="underline font-bold">اضغط هنا لإنشائه تلقائياً</a></div>`;
+        } else {
+            grid.innerHTML = `<div class="text-red-400 p-4">خطأ: ${e.message}</div>`; 
+        }
+    }
 }
 
 el('btn-refresh-users').onclick = loadUsers; 
 el('user-search').oninput = loadUsers;
 
 /**
- * فتح وتعبئة بيانات نافذة تعديل المستخدم
+ * فتح وتعبئة بيانات نافذة تعديل المستخدم (النسخة المطورة)
  */
 function openEditUserModal(userId, u, stats) {
     currentUserEditId = userId;
     
+    // 1. تعبئة البيانات الأساسية
     el('edit-name').value = u.username || ''; 
     el('edit-score').value = u.highScore || 0; 
     el('edit-banned').checked = u.isBanned || false; 
-    el('edit-pass').value = u.password || '';
+    el('edit-pass').value = u.password || ''; // كلمة المرور (اختياري)
     
+    // 2. تعبئة الإحصائيات
     el('edit-quizzes-played').value = stats.quizzesPlayed || 0;
     el('edit-total-correct').value = stats.totalCorrect || 0;
-    
     el('edit-weekly-score').value = u.weeklyStats?.correct || 0;
     el('edit-monthly-score').value = u.monthlyStats?.correct || 0;
 
-    el('edit-badges').value = Array.isArray(u.badges) ? u.badges.join(', ') : '';
+    // 3. إدارة الأوسمة (النظام الجديد)
+    renderBadgesManager(u.badges || []);
     
-    // الصورة
-    const prev = el('edit-avatar-preview'); prev.innerHTML = '';
-    if(u.customAvatar) { prev.innerHTML = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`; show('btn-del-avatar'); }
-    else { prev.innerHTML = `<span class="material-symbols-rounded text-slate-500 text-4xl">person</span>`; hide('btn-del-avatar'); }
+    // 4. تعبئة الصورة الشخصية
+    const prev = el('edit-avatar-preview'); 
+    prev.innerHTML = '';
+    if(u.customAvatar) { 
+        prev.innerHTML = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`; 
+        prev.classList.remove('text-5xl', 'text-slate-400'); // إزالة ستايل الايقونة
+        show('btn-del-avatar'); 
+    } else { 
+        prev.innerHTML = `<span class="material-symbols-rounded">person</span>`; 
+        prev.classList.add('text-5xl', 'text-slate-400');
+        hide('btn-del-avatar'); 
+    }
     
+    // إظهار النافذة
     el('user-edit-modal').classList.add('active', 'flex');
     el('user-edit-modal').classList.remove('hidden');
-    // لتمكين الانتقال السلس للنموذج
     setTimeout(() => el('user-edit-modal').querySelector('.modal-content').classList.remove('scale-95'), 10);
+}
+
+// دالة مساعدة لإدارة واجهة الأوسمة
+function renderBadgesManager(currentBadges) {
+    const container = el('active-badges-container');
+    const selectList = el('badge-select-list');
+    const btnAdd = el('btn-add-badge-ui');
+    
+    // أ) تعبئة القائمة المنسدلة (مرة واحدة)
+    if (selectList.options.length <= 1) {
+        // نستخدم badgesMap لجلب الأسماء العربية
+        Object.entries(badgesMap).forEach(([key, val]) => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.innerText = val.name || key; // الاسم العربي
+            selectList.appendChild(opt);
+        });
+    }
+
+    // ب) دالة رسم الشارات (Chips)
+    window.tempBadgesList = [...currentBadges]; // نسخة مؤقتة للتعديل
+    
+    const redraw = () => {
+        container.innerHTML = '';
+        el('badges-count').innerText = `${window.tempBadgesList.length} أوسمة`;
+        
+        if (window.tempBadgesList.length === 0) {
+            container.innerHTML = '<span class="text-xs text-slate-600 w-full text-center py-2">لا توجد أوسمة حالياً</span>';
+            return;
+        }
+
+        window.tempBadgesList.forEach((fullId, idx) => {
+            const baseId = fullId.split('_lvl')[0];
+            const lvlMatch = fullId.match(/lvl(\d+)/);
+            const lvl = lvlMatch ? lvlMatch[1] : '1';
+            const badgeName = badgesMap[baseId]?.name || baseId;
+
+            // تحديد لون حسب المستوى
+            let colorClass = "bg-slate-700 text-slate-200 border-slate-600";
+            if(lvl == '3') colorClass = "bg-amber-900/40 text-amber-400 border-amber-500/30";
+            if(lvl == '4') colorClass = "bg-cyan-900/40 text-cyan-400 border-cyan-500/30";
+            if(lvl == '5') colorClass = "bg-red-900/40 text-red-400 border-red-500/30";
+
+            const chip = document.createElement('div');
+            chip.className = `flex items-center gap-2 px-2 py-1 rounded text-xs border ${colorClass} transition hover:scale-105`;
+            chip.innerHTML = `
+                <span>${badgeName}</span>
+                <span class="text-[9px] opacity-70 bg-black/20 px-1 rounded">Lv.${lvl}</span>
+                <button type="button" class="hover:text-white text-inherit opacity-60 hover:opacity-100 transition" onclick="removeBadge(${idx})">
+                    <span class="material-symbols-rounded text-sm font-bold">close</span>
+                </button>
+            `;
+            container.appendChild(chip);
+        });
+    };
+
+    // ج) تفعيل زر الإضافة
+    btnAdd.onclick = () => {
+        const selectedBase = selectList.value;
+        const selectedLvl = el('badge-level-select').value;
+        
+        if (!selectedBase) return toast("يرجى اختيار وسام", "warning");
+        
+        const newBadgeId = `${selectedBase}_lvl${selectedLvl}`;
+        
+        if (window.tempBadgesList.includes(newBadgeId)) {
+            return toast("هذا الوسام مضاف بالفعل", "info");
+        }
+        
+        // إزالة أي مستوى قديم لنفس الوسام (لضمان عدم تكرار نفس الوسام بمستويات مختلفة)
+        window.tempBadgesList = window.tempBadgesList.filter(b => !b.startsWith(selectedBase + '_lvl'));
+        
+        window.tempBadgesList.push(newBadgeId);
+        redraw();
+    };
+
+    // دالة الحذف (Global scope لتكون قابلة للاستدعاء من HTML)
+    window.removeBadge = (index) => {
+        window.tempBadgesList.splice(index, 1);
+        redraw();
+    };
+
+    redraw(); // الرسم الأولي
 }
 
 el('btn-save-user').onclick = async () => {
     const btn = el('btn-save-user');
-    const originalText = btn.innerText;
-    btn.innerText = "جاري التحديث...";
+    const originalText = btn.innerHTML; // حفظنا الـ innerHTML للحفاظ على الايقونة
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التحديث...`;
     btn.disabled = true;
 
     try {
         if (!currentUserEditId) throw new Error("لم يتم تحديد المستخدم");
 
         const today = new Date();
-        // حساب مفتاح الأسبوع الحالي (يوم الجمعة كنهاية أسبوع)
+        // حساب مفتاح الأسبوع الحالي
         const day = today.getDay(); 
         const diff = (day + 2) % 7; 
         const lastFriday = new Date(today);
@@ -466,14 +599,17 @@ el('btn-save-user').onclick = async () => {
             "weeklyStats.key": currentWeekKey, 
             
             "monthlyStats.correct": parseInt(el('edit-monthly-score').value) || 0,
-            "monthlyStats.key": currentMonthKey 
+            "monthlyStats.key": currentMonthKey,
+            
+            // ✅ التصحيح هنا: نأخذ المصفوفة مباشرة من الذاكرة بدلاً من badgesInput
+            badges: window.tempBadgesList || []
         };
 
+        // تحديث كلمة المرور فقط إذا تم إدخالها
         if(el('edit-pass').value.trim() !== "") updates.password = el('edit-pass').value;
-        if(window.newAvatarBase64 !== undefined) updates.customAvatar = window.newAvatarBase64 === '' ? deleteField() : window.newAvatarBase64;
         
-        const badgesInput = el('edit-badges').value;
-        updates.badges = badgesInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        // تحديث الصورة
+        if(window.newAvatarBase64 !== undefined) updates.customAvatar = window.newAvatarBase64 === '' ? deleteField() : window.newAvatarBase64;
         
         await updateDoc(doc(db, "users", currentUserEditId), updates);
         
@@ -488,7 +624,7 @@ el('btn-save-user').onclick = async () => {
         console.error(error);
         alert("فشل الحفظ: " + error.message);
     } finally {
-        btn.innerText = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     }
 };
@@ -601,15 +737,19 @@ el('btn-refresh-reports').onclick = loadReports;
 // =========================================================
 
 // تهيئة قوائم الإضافة
+// تهيئة قوائم الإضافة
 const checkBtn = () => {
-    const checkTopic = (id) => { 
-        const topicEl = el(id);
-        const btnEl = el(`btn-${id.split('-')[0]}-filtered`);
-        if(btnEl) btnEl.disabled = !topicEl || topicEl.disabled || !topicEl.value;
-    };
-    checkTopic('export-topic');
-    checkTopic('delete-topic');
+    // زر التصدير: يتطلب التصنيف فقط
+    const expCat = el('export-cat');
+    const btnExp = el('btn-export-filtered');
+    if(btnExp) btnExp.disabled = !expCat || !expCat.value;
+
+    // زر الحذف: يتطلب الموضوع حصراً (للأمان)
+    const delTopic = el('delete-topic');
+    const btnDel = el('btn-delete-filtered');
+    if(btnDel) btnDel.disabled = !delTopic || !delTopic.value;
 };
+
 initDrops('upload-cat', 'upload-topic'); 
 initDrops('man-cat', 'man-topic'); 
 initDrops('paste-cat', 'paste-topic'); 
@@ -618,6 +758,7 @@ initDrops('export-cat', 'export-topic', checkBtn);
 initDrops('delete-cat', 'delete-topic', checkBtn);
 el('export-diff').onchange = checkBtn;
 el('delete-diff').onchange = checkBtn;
+
 
 
 el('btn-man-save').onclick = async () => {
@@ -965,15 +1106,34 @@ el('btn-save-news').onclick = async () => {
     }
 };
 
-// Exports / Deletes
 el('btn-export-filtered').onclick = async () => {
-    const t = el('export-topic').value; const diff = el('export-diff').value;
-    const constr = [where("topic","==",t)]; if(diff) constr.push(where("difficulty","==",diff));
-    const snap = await getDocs(query(collection(db,"questions"), ...constr));
-    if(snap.empty) return alert("لا توجد بيانات");
-    const data = []; snap.forEach(d => { let x = d.data(); delete x.createdAt; data.push(x); });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); a.download = `Export_${t}_${diff||'All'}.json`; a.click();
+    const cat = el('export-cat').value, t = el('export-topic').value, diff = el('export-diff').value;
+    const btn = el('btn-export-filtered');
+    
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span>`; btn.disabled = true;
+    try {
+        // إذا تم تحديد موضوع نستخدمه، وإلا نستخدم كل مواضيع التصنيف
+        const targets = t ? [t] : (topics[cat] || []);
+        const data = [];
+        
+        // جلب البيانات بالتوازي لكل المواضيع المستهدفة
+        await Promise.all(targets.map(async sub => {
+            const c = [where("topic","==",sub)];
+            if(diff) c.push(where("difficulty","==",diff));
+            const s = await getDocs(query(collection(db,"questions"), ...c));
+            s.forEach(d => { let x = d.data(); delete x.createdAt; data.push(x); });
+        }));
+
+        if(data.length === 0) throw new Error("لا توجد بيانات لتصديرها");
+        
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); 
+        a.download = `Export_${t || cat}_${diff||'All'}.json`; 
+        a.click();
+    } catch(e) { alert(e.message); }
+    btn.innerHTML = "تصدير JSON"; btn.disabled = false;
 };
+
 
 el('btn-delete-filtered').onclick = async () => {
     const t = el('delete-topic').value; const diff = el('delete-diff').value;
@@ -992,20 +1152,6 @@ el('btn-delete-filtered').onclick = async () => {
         }
     } catch(e) { alert("خطأ: " + e.message); }
     btn.innerText = "حذف الحزمة";
-};
-
-// Full Backup (All Questions)
-el('btn-backup').onclick = async () => { 
-    const btn = el('btn-backup'); 
-    btn.innerText = "جاري التحميل..."; 
-    const snap = await getDocs(collection(db,"questions")); 
-    const data = []; 
-    snap.forEach(d => data.push(d.data())); 
-    const a = document.createElement('a'); 
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); 
-    a.download = `Full_Backup_${new Date().toISOString().split('T')[0]}.json`; 
-    a.click(); 
-    btn.innerText = "تصدير"; 
 };
 
 // Nuke (Delete All Questions)

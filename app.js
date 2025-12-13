@@ -782,42 +782,84 @@ el('btn-man-save').onclick = async () => {
 };
 
 el('btn-upload-file').onclick = () => {
+    const btn = el('btn-upload-file'); 
+    const originalText = btn.innerHTML;
+    
     const f = el('json-file-input').files[0], t = el('upload-topic').value;
     if(!f || !t) return toast("اختر ملف وموضوع", "warning");
+    
+    // 1. إضافة حالة التحميل
+    btn.innerHTML = `<span class="material-symbols-rounded spinner text-sm">sync</span> جاري الرفع...`;
+    btn.disabled = true;
+
     const r = new FileReader(); 
     r.onload = async (e) => { 
         try { 
             const d = JSON.parse(e.target.result); 
+            if (!Array.isArray(d)) throw new Error("الملف لا يحتوي على مصفوفة JSON صالحة.");
             let c=0; 
+            const batch = writeBatch(db); // استخدام الدفعة
+            
             for(let q of d) { 
                 if(q.question) { 
-                    await addDoc(collection(db,"questions"),{
+                    const newDocRef = doc(collection(db, "questions"));
+                    batch.set(newDocRef, {
                         ...q, 
                         topic:t, 
-                        difficulty: q.difficulty || 'متوسط', // استخدام صعوبة الملف إن وجدت
+                        difficulty: q.difficulty || 'متوسط',
                         isReviewed: q.isReviewed || false, 
                         createdAt:serverTimestamp()
                     }); 
                     c++; 
                 } 
             } 
-            toast(`تم رفع ${c} سؤال`); 
+
+            if (c > 0) await batch.commit();
+            
+            toast(`تم رفع ${c} سؤال بنجاح ✅`); 
+            isCacheLoaded = false;
+            loadStats(); 
+            el('json-file-input').value = ''; 
+
         } catch(x){ 
             alert("خطأ في تحليل ملف JSON: " + x.message); 
-        } 
+        } finally {
+            // 4. إعادة حالة الزر الأصلية
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }; 
     r.readAsText(f);
 };
 
 el('btn-paste-upload').onclick = async () => {
+    const btn = el('btn-paste-upload'); 
+    const originalText = btn.innerHTML;
+    
+    // 1. إضافة حالة التحميل
+    btn.innerHTML = `<span class="material-symbols-rounded spinner text-sm">sync</span> جاري المعالجة...`;
+    btn.disabled = true;
+
     const txt = el('json-paste-area').value, t = el('paste-topic').value;
-    if(!txt || !t) return toast("أدخل النص واختر الموضوع", "warning");
+    if(!txt || !t) {
+        toast("أدخل النص واختر الموضوع", "warning");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
+    
     try { 
         const d = JSON.parse(txt); 
+        if (!Array.isArray(d)) throw new Error("الملف لا يحتوي على مصفوفة JSON صالحة.");
         let c=0; 
+        
+        // استخدام writeBatch لتقليل عدد العمليات وتحسين الأداء
+        const batch = writeBatch(db); 
+        
         for(let q of d) { 
             if(q.question) { 
-                await addDoc(collection(db,"questions"),{
+                const newDocRef = doc(collection(db, "questions"));
+                batch.set(newDocRef, {
                     ...q, 
                     topic:t, 
                     difficulty: q.difficulty || 'متوسط',
@@ -827,12 +869,28 @@ el('btn-paste-upload').onclick = async () => {
                 c++; 
             } 
         } 
-        toast(`تمت إضافة ${c} سؤال`); 
+        
+        if (c > 0) {
+            await batch.commit(); // تنفيذ الدفعة
+        }
+        
+        toast(`تمت إضافة ${c} سؤال بنجاح ✅`); 
         el('json-paste-area').value=''; 
+        
+        // تحديث حالة الأرشيف والعدادات
+        isCacheLoaded = false; 
+        loadStats(); 
+
     } catch(x){ 
-        alert("خطأ في تحليل كود JSON: " + x.message); 
+        console.error(x);
+        alert("خطأ في تحليل كود JSON: " + x.message);
+    } finally {
+        // 4. إعادة حالة الزر الأصلية
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 };
+
 
 // =========================================================
 // 9. QUESTION MANAGEMENT (LOAD, SEARCH, RENDER CARD)
@@ -1136,22 +1194,44 @@ el('btn-export-filtered').onclick = async () => {
 
 
 el('btn-delete-filtered').onclick = async () => {
-    const t = el('delete-topic').value; const diff = el('delete-diff').value;
+    const t = el('delete-topic').value; 
+    const diff = el('delete-diff').value;
     if(!t) return;
+    
     if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff ? 'بصعوبة '+diff : 'بكل الصعوبات'}؟`)) return;
     
-    const btn = el('btn-delete-filtered'); btn.innerText = "جاري الحذف...";
+    const btn = el('btn-delete-filtered'); 
+    const originalText = btn.innerText;
+    
+    // 1. إضافة حالة التحميل
+    btn.innerText = "جاري الحذف...";
+    btn.disabled = true;
+
     try {
-        const constr = [where("topic","==",t)]; if(diff) constr.push(where("difficulty","==",diff));
+        const constr = [where("topic","==",t)]; 
+        if(diff) constr.push(where("difficulty","==",diff));
+        
         const snap = await getDocs(query(collection(db,"questions"), ...constr));
-        if(snap.empty) { alert("لا توجد أسئلة مطابقة"); }
+        
+        if(snap.empty) { 
+            toast("لا توجد أسئلة مطابقة للحذف", "info"); 
+        }
         else {
-            const batch = writeBatch(db); snap.forEach(d => batch.delete(d.ref));
-            await batch.commit(); alert(`تم حذف ${snap.size} سؤال.`); loadStats();
+            const batch = writeBatch(db); 
+            snap.forEach(d => batch.delete(d.ref));
+            await batch.commit(); 
+            // 2. رسالة نجاح واضحة
+            toast(`تم حذف ${snap.size} سؤال بنجاح 🗑️`, "delete"); 
+            loadStats();
             isCacheLoaded = false;
         }
-    } catch(e) { alert("خطأ: " + e.message); }
-    btn.innerText = "حذف الحزمة";
+    } catch(e) { 
+        alert("خطأ: " + e.message); 
+    } finally {
+        // 3. إعادة حالة الزر الأصلية
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 };
 
 // Nuke (Delete All Questions)
@@ -1196,10 +1276,15 @@ function restoreTimestamps(obj) {
 /**
  * دالة التصدير العامة (تحفظ البيانات مع ID الأصلي)
  */
+/**
+ * دالة التصدير العامة (تحفظ البيانات مع ID الأصلي)
+ */
 async function exportCollection(colName, filename, btnId) {
     const btn = el(btnId);
     const originalContent = btn.innerHTML;
-    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span>`;
+    
+    // 1. إظهار حالة التحميل
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...`;
     btn.disabled = true;
 
     try {
@@ -1209,6 +1294,10 @@ async function exportCollection(colName, filename, btnId) {
             data.push({ _docId: d.id, ...d.data() });
         });
 
+        if (data.length === 0) {
+             throw new Error("لا توجد بيانات لتصديرها.");
+        }
+        
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1217,11 +1306,14 @@ async function exportCollection(colName, filename, btnId) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        toast(`تم تصدير ${data.length} مستند بنجاح ✅`);
+        
+        // 2. رسالة نجاح واضحة
+        toast(`تم تصدير ${data.length} مستند بنجاح ✅`, "download");
     } catch (e) {
         console.error(e);
         alert("خطأ في التصدير: " + e.message);
     } finally {
+        // 3. إعادة حالة الزر الأصلية
         btn.innerHTML = originalContent;
         btn.disabled = false;
     }
@@ -1236,6 +1328,8 @@ async function importCollection(colName, fileInputId, progressId) {
     if (!file) return;
 
     const progressEl = el(progressId);
+    
+    // 1. مؤشر حالة التحليل
     progressEl.innerText = "جاري قراءة الملف...";
     progressEl.className = "text-xs text-center mt-2 text-amber-500 font-bold";
 
@@ -1245,6 +1339,7 @@ async function importCollection(colName, fileInputId, progressId) {
             let data = JSON.parse(e.target.result);
             if (!Array.isArray(data)) throw new Error("الملف لا يحتوي على مصفوفة بيانات صالحة");
 
+            // 2. مؤشر حالة الرفع
             progressEl.innerText = `تم العثور على ${data.length} عنصر. جاري الرفع... (قد يستغرق وقتاً)`;
             
             let successCount = 0;
@@ -1263,15 +1358,16 @@ async function importCollection(colName, fileInputId, progressId) {
 
                 batch.set(doc(db, colName, docId), item);
                 
-                if ((i + 1) % BATCH_SIZE === 0) {
+                if ((i + 1) % BATCH_SIZE === 0 || i === data.length - 1) { // تنفيذ الدفعة الأخيرة أيضاً
                     await batch.commit();
                     batch = writeBatch(db); 
+                    // 3. التحديث اللحظي للتقدم
                     progressEl.innerText = `جاري المعالجة: ${i + 1} / ${data.length}`;
                 }
                 successCount++;
             }
-            // تنفيذ الدفعة الأخيرة
-            await batch.commit(); 
+            // تنفيذ الدفعة الأخيرة (تم دمجها في الشرط أعلاه، لكن نترك هذه للحماية)
+            // if (successCount % BATCH_SIZE !== 0) await batch.commit(); 
 
             progressEl.innerText = `✅ تم! نجح: ${successCount} | فشل: ${errorCount}`;
             progressEl.className = "text-xs text-center mt-2 text-green-400 font-bold";
@@ -1302,18 +1398,32 @@ el('file-import-questions').onchange = () => importCollection('questions', 'file
 // تصدير "أخرى" (البلاغات والنظام)
 el('btn-export-others-json').onclick = async () => {
      const btn = el('btn-export-others-json');
-     btn.disabled = true; btn.innerHTML = '...';
+     const originalText = btn.innerHTML;
+     
+     btn.disabled = true; 
+     btn.innerHTML = '<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...'; // مؤشر تحميل
+     
      try {
          const reports = []; (await getDocs(collection(db, "reports"))).forEach(d => reports.push({_docId: d.id, ...d.data(), _collection: 'reports'}));
          const system = []; (await getDocs(collection(db, "system"))).forEach(d => system.push({_docId: d.id, ...d.data(), _collection: 'system'}));
          const combined = [...reports, ...system];
          
+         if (combined.length === 0) {
+             toast("لا توجد بيانات أخرى لتصديرها.", "info");
+             return;
+         }
+         
          const blob = new Blob([JSON.stringify(combined, null, 2)], { type: 'application/json' });
          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Others_Backup_${combined.length}.json`;
          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-         toast(`تم تصدير ${combined.length} عنصر`);
-         btn.innerHTML = `<span class="material-symbols-rounded">download</span> تصدير`; btn.disabled = false;
-     } catch(e) { alert(e.message); btn.disabled=false; }
+         
+         toast(`تم تصدير ${combined.length} عنصر بنجاح ✅`);
+     } catch(e) { 
+         alert(e.message); 
+     } finally {
+         btn.innerHTML = originalText; 
+         btn.disabled = false;
+     }
 };
 
 // استيراد "أخرى"

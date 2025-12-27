@@ -2,6 +2,8 @@
   "name": "لوحة تحكم المطور - وحي",
   "short_name": "المطور",
   "start_url": "./index.html",
+  "id": "/",
+  "start_url": ".",
   "display": "fullscreen",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
@@ -22,3 +24,5 @@
     }
   ]
 }
+
+

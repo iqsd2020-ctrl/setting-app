@@ -3,7 +3,26 @@
 // =========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, writeBatch, startAfter, deleteField, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { 
+    getFirestore, 
+    collection, 
+    getDocs, 
+    doc, 
+    getDoc, 
+    updateDoc, 
+    deleteDoc, 
+    addDoc, 
+    setDoc, 
+    query, 
+    where, 
+    orderBy, 
+    limit, 
+    serverTimestamp, 
+    writeBatch, 
+    startAfter, 
+    deleteField, 
+    Timestamp 
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 // استيراد البيانات الثابتة من ملف data.js
 import { topics, badgesMap, badgesData } from './data.js';
@@ -24,18 +43,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-// ... باقي الكود كما هو
-let isAuthReady = false;
-signInAnonymously(auth).then(() => { 
-    isAuthReady = true; 
-    console.log("Admin Auth Ready"); 
-    bindEventHandlers();
-    setupAI();
-    // تحميل الصفحة الافتراضية مباشرة
-    loadStats();
-    triggerTab('view-dashboard');
-}).catch(e => console.error("Firebase Auth Error:", e));
 
+let isAuthReady = false;
+let currentUserEditId = null;
+let lastVisible = null; 
+let allQuestionsCache = [];
+let isCacheLoaded = false;
+let isFetchingQs = false;
 
 // =========================================================
 // 2. GLOBAL UI/UTILITY HELPERS
@@ -55,15 +69,13 @@ const toast = (msg, icon = 'check_circle') => {
     const tMsg = el('toast-msg');
     const tIcon = el('toast-icon');
 
-    if (!t || !tMsg || !tIcon) return; // تأكد من وجود العناصر
+    if (!t || !tMsg || !tIcon) return;
 
     tMsg.innerText = msg; 
     tIcon.innerText = icon; 
     
-    // إزالة فئة hidden وإضافة flex
     t.classList.remove('hidden', 'translate-y-5', 'opacity-0'); 
-    t.classList.add('flex'); 
-    t.classList.add('opacity-100'); 
+    t.classList.add('flex', 'opacity-100'); 
     
     setTimeout(() => { 
         t.classList.remove('opacity-100'); 
@@ -75,21 +87,19 @@ const toast = (msg, icon = 'check_circle') => {
     }, 3000); 
 };
 
-
-
 // =========================================================
-// 4. NAVIGATION & UI HANDLERS
+// 3. NAVIGATION & UI HANDLERS
 // =========================================================
 
 /**
  * فتح وإغلاق القائمة الجانبية (للموبايل)
  */
-window.toggleAdminMenu = (show) => {
+window.toggleAdminMenu = (showMenu) => {
     const sidebar = el('admin-sidebar');
     const overlay = el('side-menu-overlay');
     if (!sidebar || !overlay) return;
 
-    if (show) {
+    if (showMenu) {
         sidebar.style.right = '0';
         overlay.classList.remove('hidden');
         setTimeout(() => overlay.classList.remove('opacity-0'), 10);
@@ -100,9 +110,9 @@ window.toggleAdminMenu = (show) => {
     }
 };
 
+// تعيين معالجات الأحداث للقائمة
 el('mobile-menu-btn').onclick = () => window.toggleAdminMenu(true);
 el('side-menu-overlay').onclick = () => window.toggleAdminMenu(false);
-
 
 window.triggerTab = (tabId) => {
     document.querySelectorAll('.nav-item').forEach(b => { 
@@ -115,26 +125,28 @@ window.triggerTab = (tabId) => {
 
     if(tabId === 'view-users') loadUsers();
     if(tabId === 'view-reports') loadReports();
-    if(tabId === 'view-manage') { el('qs-search-input').value=''; loadQuestions(false); }
+    if(tabId === 'view-manage') { 
+        el('qs-search-input').value=''; 
+        loadQuestions(false); 
+    }
     if(tabId === 'view-dashboard') loadStats();
-    
-    // إضافة جديدة
     if(tabId === 'view-ai-settings') loadAISettings();
-
+    
     window.toggleAdminMenu(false);
     el('main-view-area')?.scrollTo(0, 0);
 };
 
+// ربط أحداث التنقل
+document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.onclick = () => window.triggerTab(btn.dataset.tab);
+});
 
-document.querySelectorAll('.nav-item').forEach(btn => btn.onclick = () => window.triggerTab(btn.dataset.tab));
-document.querySelectorAll('.glass[data-target]').forEach(card => card.onclick = () => window.triggerTab(card.dataset.target));
-
+document.querySelectorAll('.glass[data-target]').forEach(card => {
+    card.onclick = () => window.triggerTab(card.dataset.target);
+});
 
 /**
  * تهيئة قوائم التصنيفات والمواضيع
- * @param {string} cId - ID لقائمة التصنيفات (الفئة)
- * @param {string} tId - ID لقائمة المواضيع (الموضوع)
- * @param {function} onChangeCallback - دالة تُنفذ عند تغيير الفئة أو الموضوع
  */
 const initDrops = (cId, tId, onChangeCallback = null) => {
     const c = el(cId), t = el(tId);
@@ -143,7 +155,6 @@ const initDrops = (cId, tId, onChangeCallback = null) => {
     c.innerHTML = '<option value="">-- اختر التصنيف --</option>'; 
     Object.keys(topics).forEach(k => c.add(new Option(k, k)));
     
-    // دالة تحديث المواضيع بناءً على التصنيف المختار
     const updateTopics = () => {
         t.innerHTML = '<option value="">-- اختر الموضوع --</option>'; 
         if(topics[c.value]) { 
@@ -160,79 +171,81 @@ const initDrops = (cId, tId, onChangeCallback = null) => {
 };
 
 // =========================================================
-// 5. DASHBOARD & CHARTS LOGIC
+// 4. DASHBOARD & CHARTS LOGIC
 // =========================================================
 let myChart = null; 
 let myActivityChart = null; 
 let cachedQuestionsData = []; 
 
 async function loadStats() {
-    // أ) جلب الأسئلة وحساب المعتمد/غير المعتمد
-    const qSnap = await getDocs(query(collection(db, "questions")));
-    let approvedCount = 0;
-    cachedQuestionsData = []; 
-    
-    qSnap.forEach(doc => {
-        const d = doc.data();
-        cachedQuestionsData.push(d); 
-        if(d.isReviewed === true) approvedCount++;
-    });
-    
-    const totalQuestions = qSnap.size;
-    const pendingCount = totalQuestions - approvedCount;
+    try {
+        // أ) جلب الأسئلة وحساب المعتمد/غير المعتمد
+        const qSnap = await getDocs(query(collection(db, "questions")));
+        let approvedCount = 0;
+        cachedQuestionsData = []; 
+        
+        qSnap.forEach(doc => {
+            const d = doc.data();
+            cachedQuestionsData.push(d); 
+            if(d.isReviewed === true) approvedCount++;
+        });
+        
+        const totalQuestions = qSnap.size;
+        const pendingCount = totalQuestions - approvedCount;
 
-    if(el('dash-total-q')) el('dash-total-q').innerText = totalQuestions;
-    if(el('dash-approved-q')) el('dash-approved-q').innerText = approvedCount;
-    if(el('dash-pending-q')) el('dash-pending-q').innerText = pendingCount;
+        if(el('dash-total-q')) el('dash-total-q').innerText = totalQuestions;
+        if(el('dash-approved-q')) el('dash-approved-q').innerText = approvedCount;
+        if(el('dash-pending-q')) el('dash-pending-q').innerText = pendingCount;
 
-    // ب) جلب المستخدمين وحساب النشاط اليومي
-    const uSnap = await getDocs(query(collection(db, "users"))); 
-    if(el('dash-users-count')) el('dash-users-count').innerText = uSnap.size;
+        // ب) جلب المستخدمين وحساب النشاط اليومي
+        const uSnap = await getDocs(query(collection(db, "users"))); 
+        if(el('dash-users-count')) el('dash-users-count').innerText = uSnap.size;
 
-    const activityMap = {};
-    const last14Days = [];
-    const today = new Date();
+        const activityMap = {};
+        const last14Days = [];
+        const today = new Date();
 
-    for (let i = 13; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        last14Days.push(dateStr);
-        activityMap[dateStr] = 0;
-    }
-
-    uSnap.forEach(doc => {
-        const u = doc.data();
-        if (u.stats && Array.isArray(u.stats.lastPlayedDates)) {
-            u.stats.lastPlayedDates.forEach(date => {
-                if (activityMap.hasOwnProperty(date)) {
-                    activityMap[date]++;
-                }
-            });
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            last14Days.push(dateStr);
+            activityMap[dateStr] = 0;
         }
-    });
 
-    const activityData = last14Days.map(date => activityMap[date]);
-    renderActivityChart(last14Days, activityData);
+        uSnap.forEach(doc => {
+            const u = doc.data();
+            if (u.stats && Array.isArray(u.stats.lastPlayedDates)) {
+                u.stats.lastPlayedDates.forEach(date => {
+                    if (activityMap.hasOwnProperty(date)) {
+                        activityMap[date]++;
+                    }
+                });
+            }
+        });
 
-    // ج) باقي العدادات
-    const rSnap = await getDocs(query(collection(db, "reports"))); 
-    if(el('dash-reports-count')) el('dash-reports-count').innerText = rSnap.size;
-    if(el('dash-topics-count')) el('dash-topics-count').innerText = Object.keys(topics).length;
-    
-    // د) تحديث الرسم الدائري
-    const chartFilter = el('chart-filter');
-    if(chartFilter) {
-        chartFilter.innerHTML = '<option value="main">حسب التصنيف الرئيسي</option>';
-        Object.keys(topics).forEach(k => chartFilter.add(new Option(k, k)));
-        chartFilter.onchange = (e) => renderChart(e.target.value);
-        renderChart('main');
+        const activityData = last14Days.map(date => activityMap[date]);
+        renderActivityChart(last14Days, activityData);
+
+        // ج) باقي العدادات
+        const rSnap = await getDocs(query(collection(db, "reports"))); 
+        if(el('dash-reports-count')) el('dash-reports-count').innerText = rSnap.size;
+        if(el('dash-topics-count')) el('dash-topics-count').innerText = Object.keys(topics).length;
+        
+        // د) تحديث الرسم الدائري
+        const chartFilter = el('chart-filter');
+        if(chartFilter) {
+            chartFilter.innerHTML = '<option value="main">حسب التصنيف الرئيسي</option>';
+            Object.keys(topics).forEach(k => chartFilter.add(new Option(k, k)));
+            chartFilter.onchange = (e) => renderChart(e.target.value);
+            renderChart('main');
+        }
+    } catch (error) {
+        console.error("Error loading stats:", error);
+        toast("خطأ في تحميل الإحصائيات", "error");
     }
 }
 
-/**
- * دالة رسم المخطط الخطي (النشاط اليومي)
- */
 function renderActivityChart(labels, data) {
     const canvas = el('activityChart');
     if (!canvas) return;
@@ -275,9 +288,6 @@ function renderActivityChart(labels, data) {
     });
 }
 
-/**
- * دالة رسم المخطط الدائري (توزيع الأسئلة)
- */
 function renderChart(mode) { 
     if (!el('questionsChart')) return;
     
@@ -319,22 +329,20 @@ function renderChart(mode) {
     });
 }
 
-
 // =========================================================
-// 6. USER MANAGEMENT (LOAD, RENDER, EDIT/SAVE LOGIC)
+// 5. USER MANAGEMENT
 // =========================================================
-
-let currentUserEditId = null;
 
 async function loadUsers() {
     const grid = el('users-grid'); 
-    grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-10"; // تصميم الشبكة
+    if (!grid) return;
+    
+    grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-10";
     grid.innerHTML = '<div class="col-span-full text-center py-12"><span class="material-symbols-rounded spinner text-amber-500 text-4xl">sync</span></div>';
     
     const term = el('user-search').value.toLowerCase();
     
     try {
-        // ✅ التعديل هنا: الترتيب حسب stats.totalCorrect تنازلياً
         const snap = await getDocs(query(collection(db, "users"), orderBy("stats.totalCorrect", "desc"), limit(50)));
         
         grid.innerHTML = '';
@@ -346,9 +354,9 @@ async function loadUsers() {
             
             const displayName = u.username || 'ضيف';
             const stats = u.stats || {};
-            const totalCorrect = stats.totalCorrect || 0; // تخزين الرقم لاستخدامه
+            const totalCorrect = stats.totalCorrect || 0;
 
-            // --- عرض الأوسمة ---
+            // عرض الأوسمة
             let badgesHtml = '';
             if (u.badges && Array.isArray(u.badges) && u.badges.length > 0) {
                 badgesHtml = '<div class="flex flex-wrap gap-1 mt-3">';
@@ -434,7 +442,6 @@ async function loadUsers() {
         });
     } catch(e) { 
         console.error(e); 
-        // رسالة تنبيه في حال طلب Firebase إنشاء فهرس (Index)
         if(e.message.includes("index")) {
             grid.innerHTML = `<div class="col-span-full text-center text-red-400 p-4 border border-red-500/30 bg-red-900/10 rounded-xl">⚠️ يتطلب هذا الترتيب فهرساً (Index) في Firebase.<br><a href="${e.message.match(/https?:\/\/[^\s]+/)[0]}" target="_blank" class="underline font-bold">اضغط هنا لإنشائه تلقائياً</a></div>`;
         } else {
@@ -443,12 +450,6 @@ async function loadUsers() {
     }
 }
 
-el('btn-refresh-users').onclick = loadUsers; 
-el('user-search').oninput = loadUsers;
-
-/**
- * فتح وتعبئة بيانات نافذة تعديل المستخدم (النسخة المطورة)
- */
 function openEditUserModal(userId, u, stats) {
     currentUserEditId = userId;
     
@@ -456,7 +457,7 @@ function openEditUserModal(userId, u, stats) {
     el('edit-name').value = u.username || ''; 
     el('edit-score').value = u.highScore || 0; 
     el('edit-banned').checked = u.isBanned || false; 
-    el('edit-pass').value = u.password || ''; // كلمة المرور (اختياري)
+    el('edit-pass').value = u.password || '';
     
     // 2. تعبئة الإحصائيات
     el('edit-quizzes-played').value = stats.quizzesPlayed || 0;
@@ -464,7 +465,7 @@ function openEditUserModal(userId, u, stats) {
     el('edit-weekly-score').value = u.weeklyStats?.correct || 0;
     el('edit-monthly-score').value = u.monthlyStats?.correct || 0;
 
-    // 3. إدارة الأوسمة (النظام الجديد)
+    // 3. إدارة الأوسمة
     renderBadgesManager(u.badges || []);
     
     // 4. تعبئة الصورة الشخصية
@@ -472,7 +473,7 @@ function openEditUserModal(userId, u, stats) {
     prev.innerHTML = '';
     if(u.customAvatar) { 
         prev.innerHTML = `<img src="${u.customAvatar}" class="w-full h-full object-cover">`; 
-        prev.classList.remove('text-5xl', 'text-slate-400'); // إزالة ستايل الايقونة
+        prev.classList.remove('text-5xl', 'text-slate-400');
         show('btn-del-avatar'); 
     } else { 
         prev.innerHTML = `<span class="material-symbols-rounded">person</span>`; 
@@ -486,25 +487,25 @@ function openEditUserModal(userId, u, stats) {
     setTimeout(() => el('user-edit-modal').querySelector('.modal-content').classList.remove('scale-95'), 10);
 }
 
-// دالة مساعدة لإدارة واجهة الأوسمة
 function renderBadgesManager(currentBadges) {
     const container = el('active-badges-container');
     const selectList = el('badge-select-list');
     const btnAdd = el('btn-add-badge-ui');
     
+    if (!container || !selectList || !btnAdd) return;
+    
     // أ) تعبئة القائمة المنسدلة (مرة واحدة)
     if (selectList.options.length <= 1) {
-        // نستخدم badgesMap لجلب الأسماء العربية
         Object.entries(badgesMap).forEach(([key, val]) => {
             const opt = document.createElement('option');
             opt.value = key;
-            opt.innerText = val.name || key; // الاسم العربي
+            opt.innerText = val.name || key;
             selectList.appendChild(opt);
         });
     }
 
     // ب) دالة رسم الشارات (Chips)
-    window.tempBadgesList = [...currentBadges]; // نسخة مؤقتة للتعديل
+    window.tempBadgesList = [...currentBadges];
     
     const redraw = () => {
         container.innerHTML = '';
@@ -521,7 +522,6 @@ function renderBadgesManager(currentBadges) {
             const lvl = lvlMatch ? lvlMatch[1] : '1';
             const badgeName = badgesMap[baseId]?.name || baseId;
 
-            // تحديد لون حسب المستوى
             let colorClass = "bg-slate-700 text-slate-200 border-slate-600";
             if(lvl == '3') colorClass = "bg-amber-900/40 text-amber-400 border-amber-500/30";
             if(lvl == '4') colorClass = "bg-cyan-900/40 text-cyan-400 border-cyan-500/30";
@@ -545,33 +545,40 @@ function renderBadgesManager(currentBadges) {
         const selectedBase = selectList.value;
         const selectedLvl = el('badge-level-select').value;
         
-        if (!selectedBase) return toast("يرجى اختيار وسام", "warning");
+        if (!selectedBase) {
+            toast("يرجى اختيار وسام", "warning");
+            return;
+        }
         
         const newBadgeId = `${selectedBase}_lvl${selectedLvl}`;
         
         if (window.tempBadgesList.includes(newBadgeId)) {
-            return toast("هذا الوسام مضاف بالفعل", "info");
+            toast("هذا الوسام مضاف بالفعل", "info");
+            return;
         }
         
-        // إزالة أي مستوى قديم لنفس الوسام (لضمان عدم تكرار نفس الوسام بمستويات مختلفة)
         window.tempBadgesList = window.tempBadgesList.filter(b => !b.startsWith(selectedBase + '_lvl'));
-        
         window.tempBadgesList.push(newBadgeId);
         redraw();
     };
 
-    // دالة الحذف (Global scope لتكون قابلة للاستدعاء من HTML)
     window.removeBadge = (index) => {
         window.tempBadgesList.splice(index, 1);
         redraw();
     };
 
-    redraw(); // الرسم الأولي
+    redraw();
 }
+
+// أحداث إدارة المستخدمين
+el('btn-refresh-users').onclick = loadUsers; 
+el('user-search').oninput = loadUsers;
 
 el('btn-save-user').onclick = async () => {
     const btn = el('btn-save-user');
-    const originalText = btn.innerHTML; // حفظنا الـ innerHTML للحفاظ على الايقونة
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
     btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التحديث...`;
     btn.disabled = true;
 
@@ -579,7 +586,6 @@ el('btn-save-user').onclick = async () => {
         if (!currentUserEditId) throw new Error("لم يتم تحديد المستخدم");
 
         const today = new Date();
-        // حساب مفتاح الأسبوع الحالي
         const day = today.getDay(); 
         const diff = (day + 2) % 7; 
         const lastFriday = new Date(today);
@@ -591,25 +597,20 @@ el('btn-save-user').onclick = async () => {
             username: el('edit-name').value, 
             highScore: parseInt(el('edit-score').value) || 0, 
             isBanned: el('edit-banned').checked,
-            
             "stats.quizzesPlayed": parseInt(el('edit-quizzes-played').value) || 0,
             "stats.totalCorrect": parseInt(el('edit-total-correct').value) || 0,
-
             "weeklyStats.correct": parseInt(el('edit-weekly-score').value) || 0,
             "weeklyStats.key": currentWeekKey, 
-            
             "monthlyStats.correct": parseInt(el('edit-monthly-score').value) || 0,
             "monthlyStats.key": currentMonthKey,
-            
-            // ✅ التصحيح هنا: نأخذ المصفوفة مباشرة من الذاكرة بدلاً من badgesInput
             badges: window.tempBadgesList || []
         };
 
-        // تحديث كلمة المرور فقط إذا تم إدخالها
         if(el('edit-pass').value.trim() !== "") updates.password = el('edit-pass').value;
         
-        // تحديث الصورة
-        if(window.newAvatarBase64 !== undefined) updates.customAvatar = window.newAvatarBase64 === '' ? deleteField() : window.newAvatarBase64;
+        if(window.newAvatarBase64 !== undefined) {
+            updates.customAvatar = window.newAvatarBase64 === '' ? deleteField() : window.newAvatarBase64;
+        }
         
         await updateDoc(doc(db, "users", currentUserEditId), updates);
         
@@ -634,7 +635,10 @@ el('btn-delete-user-permanent').onclick = async () => {
     if (!confirm("⚠️ تحذير خطير!\n\nهل أنت متأكد تماماً من رغبتك في حذف هذا اللاعب نهائياً؟")) return;
     
     const confirmationName = prompt("للتأكيد النهائي، اكتب كلمة (حذف):");
-    if (confirmationName !== "حذف") return alert("لم يتم الحذف.");
+    if (confirmationName !== "حذف") {
+        alert("لم يتم الحذف.");
+        return;
+    }
 
     const btn = el('btn-delete-user-permanent');
     const originalText = btn.innerHTML;
@@ -655,11 +659,14 @@ el('btn-delete-user-permanent').onclick = async () => {
     }
 };
 
-// كود معالجة رفع الصورة وحذفها
+// معالجة رفع الصورة
 el('upload-new-avatar').onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return toast("حجم الصورة كبير جداً", "warning");
+    if (file.size > 2 * 1024 * 1024) {
+        toast("حجم الصورة كبير جداً", "warning");
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -676,18 +683,25 @@ el('btn-del-avatar').onclick = () => {
     hide('btn-del-avatar');
 };
 
-
 // =========================================================
-// 7. REPORTS LOGIC
+// 6. REPORTS LOGIC
 // =========================================================
 
 async function loadReports() {
     const grid = el('reports-grid'); 
+    if (!grid) return;
+    
     grid.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-slate-500 py-8"><span class="material-symbols-rounded spinner text-3xl">sync</span></div>';
+    
     try {
         const snap = await getDocs(query(collection(db, "reports"), orderBy("timestamp", "desc")));
         grid.innerHTML = '';
-        if(snap.empty) { grid.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-slate-500 py-8 border border-dashed border-slate-700 rounded-xl">لا توجد بلاغات جديدة 🎉</div>'; return; }
+        
+        if(snap.empty) { 
+            grid.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-slate-500 py-8 border border-dashed border-slate-700 rounded-xl">لا توجد بلاغات جديدة 🎉</div>'; 
+            return; 
+        }
+        
         snap.forEach(docSnap => {
             const r = docSnap.data(); 
             const date = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleDateString('ar-EG') : 'غير محدد';
@@ -713,82 +727,133 @@ async function loadReports() {
                     <button class="bg-red-900/50 hover:bg-red-900 text-red-400 border border-red-800 py-2 rounded text-xs font-bold btn-nuke-q shadow">حذف السؤال!</button>
                 </div>
             `;
-            div.querySelector('.btn-dismiss').onclick = async () => { if(confirm("حذف البلاغ فقط؟")) { await deleteDoc(doc(db, "reports", docSnap.id)); div.remove(); toast("تم حذف البلاغ"); } };
-            div.querySelector('.btn-nuke-q').onclick = async () => { if(confirm("حذف السؤال والبلاغ نهائياً؟")) { try { if(r.questionId && r.questionId !== 'N/A') await deleteDoc(doc(db, "questions", r.questionId)); await deleteDoc(doc(db, "reports", docSnap.id)); div.remove(); toast("تم حذف السؤال والبلاغ", "delete"); } catch(e) { alert(e.message); } } };
+            
+            div.querySelector('.btn-dismiss').onclick = async () => { 
+                if(confirm("حذف البلاغ فقط؟")) { 
+                    await deleteDoc(doc(db, "reports", docSnap.id)); 
+                    div.remove(); 
+                    toast("تم حذف البلاغ"); 
+                } 
+            };
+            
+            div.querySelector('.btn-nuke-q').onclick = async () => { 
+                if(confirm("حذف السؤال والبلاغ نهائياً؟")) { 
+                    try { 
+                        if(r.questionId && r.questionId !== 'N/A') {
+                            await deleteDoc(doc(db, "questions", r.questionId));
+                        }
+                        await deleteDoc(doc(db, "reports", docSnap.id)); 
+                        div.remove(); 
+                        toast("تم حذف السؤال والبلاغ", "delete"); 
+                    } catch(e) { 
+                        alert(e.message); 
+                    } 
+                } 
+            };
+            
             div.querySelector('.btn-fix').onclick = async () => { 
-                if(!r.questionId || r.questionId === 'N/A') return alert("لا يوجد معرف للسؤال"); 
+                if(!r.questionId || r.questionId === 'N/A') {
+                    alert("لا يوجد معرف للسؤال");
+                    return;
+                }
+                
                 const btn = div.querySelector('.btn-fix'); 
                 btn.innerText = "جاري الجلب..."; 
+                
                 try { 
                     const qDoc = await getDoc(doc(db, "questions", r.questionId)); 
-                    if(qDoc.exists()) { openEditQModal(r.questionId, qDoc.data()); } 
-                    else { alert("السؤال محذوف مسبقاً."); } 
-                } catch(e) { alert("خطأ: " + e.message); } 
+                    if(qDoc.exists()) { 
+                        openEditQModal(r.questionId, qDoc.data()); 
+                    } else { 
+                        alert("السؤال محذوف مسبقاً."); 
+                    } 
+                } catch(e) { 
+                    alert("خطأ: " + e.message); 
+                } 
+                
                 btn.innerText = "فحص وتعديل"; 
             };
+            
             grid.appendChild(div);
         });
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        toast("خطأ في تحميل البلاغات", "error");
+    }
 }
+
 el('btn-refresh-reports').onclick = loadReports;
 
 // =========================================================
-// 8. CONTENT MANAGEMENT (ADD/PASTE/UPLOAD)
+// 7. CONTENT MANAGEMENT
 // =========================================================
 
-// تهيئة قوائم الإضافة
-// تهيئة قوائم الإضافة
 const checkBtn = () => {
-    // زر التصدير: يتطلب التصنيف فقط
     const expCat = el('export-cat');
     const btnExp = el('btn-export-filtered');
     if(btnExp) btnExp.disabled = !expCat || !expCat.value;
 
-    // زر الحذف: يتطلب الموضوع حصراً (للأمان)
     const delTopic = el('delete-topic');
     const btnDel = el('btn-delete-filtered');
     if(btnDel) btnDel.disabled = !delTopic || !delTopic.value;
 };
 
+// تهيئة جميع القوائم المنسدلة
 initDrops('upload-cat', 'upload-topic'); 
 initDrops('man-cat', 'man-topic'); 
 initDrops('paste-cat', 'paste-topic'); 
 initDrops('edit-q-cat', 'edit-q-topic'); 
 initDrops('export-cat', 'export-topic', checkBtn);
 initDrops('delete-cat', 'delete-topic', checkBtn);
+
 el('export-diff').onchange = checkBtn;
 el('delete-diff').onchange = checkBtn;
 
-
-
 el('btn-man-save').onclick = async () => {
     const q = el('man-q').value, topic = el('man-topic').value;
-    if(!q || !topic) return toast("بيانات ناقصة (السؤال والموضوع)", "warning");
+    if(!q || !topic) {
+        toast("بيانات ناقصة (السؤال والموضوع)", "warning");
+        return;
+    }
+    
     const ansIdx = Array.from(document.getElementsByName('correct_ans_selector')).findIndex(r => r.checked);
     
-    await addDoc(collection(db, "questions"), { 
-        question: q, 
-        options: [el('man-o1').value, el('man-o2').value, el('man-o3').value, el('man-o4').value], 
-        correctAnswer: ansIdx, 
-        explanation: el('man-exp').value, 
-        topic: topic, 
-        difficulty: el('man-diff').value, 
-        isReviewed: false, 
-        createdAt: serverTimestamp() 
-    });
-    toast("تمت الإضافة بنجاح"); 
-    el('man-q').value=''; // تصفير السؤال
-    // يمكن إضافة المزيد من التصفير هنا
+    try {
+        await addDoc(collection(db, "questions"), { 
+            question: q, 
+            options: [el('man-o1').value, el('man-o2').value, el('man-o3').value, el('man-o4').value], 
+            correctAnswer: ansIdx, 
+            explanation: el('man-exp').value, 
+            topic: topic, 
+            difficulty: el('man-diff').value, 
+            isReviewed: false, 
+            createdAt: serverTimestamp() 
+        });
+        
+        toast("تمت الإضافة بنجاح"); 
+        el('man-q').value='';
+        el('man-o1').value='';
+        el('man-o2').value='';
+        el('man-o3').value='';
+        el('man-o4').value='';
+        el('man-exp').value='';
+    } catch (error) {
+        console.error(error);
+        toast("خطأ في إضافة السؤال", "error");
+    }
 };
 
 el('btn-upload-file').onclick = () => {
     const btn = el('btn-upload-file'); 
+    const f = el('json-file-input').files[0];
+    const t = el('upload-topic').value;
+    
+    if(!f || !t) {
+        toast("اختر ملف وموضوع", "warning");
+        return;
+    }
+    
     const originalText = btn.innerHTML;
-    
-    const f = el('json-file-input').files[0], t = el('upload-topic').value;
-    if(!f || !t) return toast("اختر ملف وموضوع", "warning");
-    
-    // 1. إضافة حالة التحميل
     btn.innerHTML = `<span class="material-symbols-rounded spinner text-sm">sync</span> جاري الرفع...`;
     btn.disabled = true;
 
@@ -797,18 +862,19 @@ el('btn-upload-file').onclick = () => {
         try { 
             const d = JSON.parse(e.target.result); 
             if (!Array.isArray(d)) throw new Error("الملف لا يحتوي على مصفوفة JSON صالحة.");
-            let c=0; 
-            const batch = writeBatch(db); // استخدام الدفعة
+            
+            let c = 0; 
+            const batch = writeBatch(db);
             
             for(let q of d) { 
                 if(q.question) { 
                     const newDocRef = doc(collection(db, "questions"));
                     batch.set(newDocRef, {
                         ...q, 
-                        topic:t, 
+                        topic: t, 
                         difficulty: q.difficulty || 'متوسط',
                         isReviewed: q.isReviewed || false, 
-                        createdAt:serverTimestamp()
+                        createdAt: serverTimestamp()
                     }); 
                     c++; 
                 } 
@@ -824,7 +890,6 @@ el('btn-upload-file').onclick = () => {
         } catch(x){ 
             alert("خطأ في تحليل ملف JSON: " + x.message); 
         } finally {
-            // 4. إعادة حالة الزر الأصلية
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
@@ -834,26 +899,23 @@ el('btn-upload-file').onclick = () => {
 
 el('btn-paste-upload').onclick = async () => {
     const btn = el('btn-paste-upload'); 
-    const originalText = btn.innerHTML;
+    const txt = el('json-paste-area').value;
+    const t = el('paste-topic').value;
     
-    // 1. إضافة حالة التحميل
-    btn.innerHTML = `<span class="material-symbols-rounded spinner text-sm">sync</span> جاري المعالجة...`;
-    btn.disabled = true;
-
-    const txt = el('json-paste-area').value, t = el('paste-topic').value;
     if(!txt || !t) {
         toast("أدخل النص واختر الموضوع", "warning");
-        btn.innerHTML = originalText;
-        btn.disabled = false;
         return;
     }
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-rounded spinner text-sm">sync</span> جاري المعالجة...`;
+    btn.disabled = true;
     
     try { 
         const d = JSON.parse(txt); 
         if (!Array.isArray(d)) throw new Error("الملف لا يحتوي على مصفوفة JSON صالحة.");
-        let c=0; 
         
-        // استخدام writeBatch لتقليل عدد العمليات وتحسين الأداء
+        let c = 0; 
         const batch = writeBatch(db); 
         
         for(let q of d) { 
@@ -861,23 +923,21 @@ el('btn-paste-upload').onclick = async () => {
                 const newDocRef = doc(collection(db, "questions"));
                 batch.set(newDocRef, {
                     ...q, 
-                    topic:t, 
+                    topic: t, 
                     difficulty: q.difficulty || 'متوسط',
                     isReviewed: q.isReviewed || false, 
-                    createdAt:serverTimestamp()
+                    createdAt: serverTimestamp()
                 }); 
                 c++; 
             } 
         } 
         
         if (c > 0) {
-            await batch.commit(); // تنفيذ الدفعة
+            await batch.commit();
         }
         
         toast(`تمت إضافة ${c} سؤال بنجاح ✅`); 
         el('json-paste-area').value=''; 
-        
-        // تحديث حالة الأرشيف والعدادات
         isCacheLoaded = false; 
         loadStats(); 
 
@@ -885,25 +945,14 @@ el('btn-paste-upload').onclick = async () => {
         console.error(x);
         alert("خطأ في تحليل كود JSON: " + x.message);
     } finally {
-        // 4. إعادة حالة الزر الأصلية
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
 };
 
-
 // =========================================================
-// 9. QUESTION MANAGEMENT (LOAD, SEARCH, RENDER CARD)
+// 8. QUESTION MANAGEMENT
 // =========================================================
-
-let lastVisible = null; 
-let allQuestionsCache = [];
-let isCacheLoaded = false;
-let isFetchingQs = false;
-
-// تهيئة قوائم فلترة إدارة الأسئلة
-initDrops('manage-cat-filter', 'manage-topic-filter', () => loadQuestions(false));
-el('manage-status-filter').onchange = () => loadQuestions(false);
 
 async function fetchAllForSearch() {
      const loader = el('q-loader');
@@ -915,7 +964,10 @@ async function fetchAllForSearch() {
         qSnap.forEach(doc => allQuestionsCache.push({ id: doc.id, ...doc.data() }));
         isCacheLoaded = true;
         return true;
-     } catch(e) { console.error(e); return false; }
+     } catch(e) { 
+         console.error(e); 
+         return false; 
+     }
 }
 
 el('qs-search-input').oninput = async function() {
@@ -955,7 +1007,6 @@ el('qs-search-input').oninput = async function() {
     }
 };
 
-
 el('btn-load-more').onclick = () => loadQuestions(true);
 el('btn-refresh-qs').onclick = () => loadQuestions(false);
 
@@ -974,8 +1025,7 @@ async function loadQuestions(loadMore = false) {
         el('qs-counter').innerText = '0'; 
         loadBtn.classList.add('hidden'); 
         grid.innerHTML = '<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span><p class="text-xs mt-2">جاري جلب البيانات...</p></div>'; 
-    } 
-    else { 
+    } else { 
         loadBtn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span> جاري التحميل...'; 
     }
 
@@ -987,11 +1037,7 @@ async function loadQuestions(loadMore = false) {
         if (statusVal === 'unreviewed') {
             constraints.push(where("isReviewed", "==", false));
         } else if (statusVal === 'uncategorized') {
-            const validTopics = new Set();
-            Object.values(topics).forEach(subList => subList.forEach(t => validTopics.add(t)));
-            // البحث عن الأسئلة التي موضوعها ليس في القائمة (عملية صعبة قد تتطلب حلولاً غير فهرسة)
-            // لحل مشكلة الفهرسة في Firestore، سنبحث عن الأسئلة التي موضوعها 'غير مصنف' فقط كمؤشر:
-             constraints.push(where("topic", "==", "غير مصنف")); 
+            constraints.push(where("topic", "==", "غير مصنف"));
         }
 
         if (topicVal) {
@@ -1000,38 +1046,46 @@ async function loadQuestions(loadMore = false) {
         
         constraints.push(orderBy("createdAt", "desc")); 
         if (loadMore && lastVisible) constraints.push(startAfter(lastVisible));
-        constraints.push(limit(50)); // تقليل الحد من 200 إلى 50 لأداء أفضل
+        constraints.push(limit(50));
 
         const q = query(collection(db, "questions"), ...constraints);
         const snapshot = await getDocs(q);
         
-        const loader = el('q-loader'); if (loader) loader.remove();
+        const loader = el('q-loader'); 
+        if (loader) loader.remove();
 
         if (snapshot.empty) {
-            if (!loadMore) grid.innerHTML = '<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج</div>';
+            if (!loadMore) {
+                grid.innerHTML = '<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج</div>';
+            }
             loadBtn.classList.add('hidden');
         } else {
             lastVisible = snapshot.docs[snapshot.docs.length - 1];
-            if (snapshot.docs.length < 50) loadBtn.classList.add('hidden'); else { loadBtn.classList.remove('hidden'); loadBtn.innerHTML = 'تحميل المزيد (50+)'; }
+            if (snapshot.docs.length < 50) {
+                loadBtn.classList.add('hidden');
+            } else { 
+                loadBtn.classList.remove('hidden'); 
+                loadBtn.innerHTML = 'تحميل المزيد (50+)'; 
+            }
+            
             snapshot.forEach(docSnap => {
                 const data = { id: docSnap.id, ...docSnap.data() };
                 renderQuestionCard(data, grid);
             });
+            
             el('qs-counter').innerText = document.querySelectorAll('#questions-grid .admin-item').length;
         }
     } catch(e) { 
         console.error(e); 
         toast("خطأ في تحميل الأسئلة: " + e.message, "error");
     }
+    
     isFetchingQs = false;
 }
 
-
-/**
- * فتح وتعبئة بيانات نافذة تعديل السؤال المتقدمة
- */
 window.openEditQModal = (id, data) => {
-    window.currQId = id; window.currQStatus = data.isReviewed || false;
+    window.currQId = id; 
+    window.currQStatus = data.isReviewed || false;
     
     el('edit-q-text').value = data.question; 
     el('edit-o1').value = data.options[0] || ''; 
@@ -1041,12 +1095,18 @@ window.openEditQModal = (id, data) => {
     el('edit-q-exp').value = data.explanation || ""; 
     el('edit-q-diff').value = data.difficulty || "متوسط";
     
-    if(document.getElementsByName('edit_ans_selector')[data.correctAnswer]) {
-        document.getElementsByName('edit_ans_selector')[data.correctAnswer].checked = true;
+    const radioButtons = document.getElementsByName('edit_ans_selector');
+    if(radioButtons[data.correctAnswer]) {
+        radioButtons[data.correctAnswer].checked = true;
     }
 
     let catFound = ""; 
-    for(let c in topics) if(topics[c].includes(data.topic)) { catFound = c; break; } 
+    for(let c in topics) {
+        if(topics[c].includes(data.topic)) { 
+            catFound = c; 
+            break; 
+        } 
+    } 
     
     if(catFound) { 
         el('edit-q-cat').value = catFound; 
@@ -1068,17 +1128,29 @@ window.openEditQModal = (id, data) => {
 };
 
 el('btn-modal-toggle-review').onclick = async () => {
+    if (!window.currQId) return;
+    
     const newStatus = !window.currQStatus;
-    await updateDoc(doc(db, "questions", window.currQId), { isReviewed: newStatus });
-    window.currQStatus = newStatus;
-    el('question-edit-modal').classList.remove('active', 'flex'); 
-    el('question-edit-modal').classList.add('hidden');
-    toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
-    loadQuestions(false);
+    
+    try {
+        await updateDoc(doc(db, "questions", window.currQId), { isReviewed: newStatus });
+        window.currQStatus = newStatus;
+        
+        el('question-edit-modal').classList.remove('active', 'flex'); 
+        el('question-edit-modal').classList.add('hidden');
+        
+        toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
+        loadQuestions(false);
+    } catch (error) {
+        console.error(error);
+        toast("خطأ في تغيير حالة المراجعة", "error");
+    }
 };
 
 el('btn-save-edit-q').onclick = async () => {
     const btn = el('btn-save-edit-q');
+    if (!btn || !window.currQId) return;
+    
     const originalText = btn.innerText;
     btn.innerText = "جاري الحفظ...";
     btn.disabled = true;
@@ -1110,365 +1182,6 @@ el('btn-save-edit-q').onclick = async () => {
         btn.innerText = originalText;
         btn.disabled = false;
     }
-};
-
-// =========================================================
-// 10. SYSTEM & MIGRATION LOGIC
-// =========================================================
-
-// What's New Logic
-async function loadWhatsNewSettings() {
-    try {
-        const docSnap = await getDoc(doc(db, "system", "whats_new"));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            el('news-message-input').value = data.message || '';
-            el('news-active-toggle').checked = data.isActive || false;
-        }
-    } catch (e) { console.error("Error loading news settings:", e); }
-}
-// Run on initialization after all bindings are done
-function bindEventHandlers() {
-    loadWhatsNewSettings();
-}
-
-el('btn-save-news').onclick = async () => {
-    const btn = el('btn-save-news');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري الحفظ...`;
-    btn.disabled = true;
-
-    const message = el('news-message-input').value;
-    const isActive = el('news-active-toggle').checked;
-
-    try {
-        await setDoc(doc(db, "system", "whats_new"), {
-            message: message,
-            isActive: isActive,
-            updatedAt: serverTimestamp()
-        }, { merge: true });
-
-        const msgEl = el('news-status-msg');
-        msgEl.style.opacity = '1';
-        msgEl.className = isActive ? "text-xs font-bold self-center text-green-400" : "text-xs font-bold self-center text-slate-400";
-        msgEl.innerText = isActive ? "تم النشر والتفعيل ✅" : "تم الحفظ (معطل) ⏸️";
-        
-        setTimeout(() => { msgEl.style.opacity = '0'; }, 3000);
-
-    } catch (e) {
-        console.error(e);
-        alert("حدث خطأ أثناء الحفظ: " + e.message);
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-};
-
-el('btn-export-filtered').onclick = async () => {
-    const cat = el('export-cat').value, t = el('export-topic').value, diff = el('export-diff').value;
-    const btn = el('btn-export-filtered');
-    
-    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span>`; btn.disabled = true;
-    try {
-        // إذا تم تحديد موضوع نستخدمه، وإلا نستخدم كل مواضيع التصنيف
-        const targets = t ? [t] : (topics[cat] || []);
-        const data = [];
-        
-        // جلب البيانات بالتوازي لكل المواضيع المستهدفة
-        await Promise.all(targets.map(async sub => {
-            const c = [where("topic","==",sub)];
-            if(diff) c.push(where("difficulty","==",diff));
-            const s = await getDocs(query(collection(db,"questions"), ...c));
-            s.forEach(d => { let x = d.data(); delete x.createdAt; data.push(x); });
-        }));
-
-        if(data.length === 0) throw new Error("لا توجد بيانات لتصديرها");
-        
-        const a = document.createElement('a'); 
-        a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); 
-        a.download = `Export_${t || cat}_${diff||'All'}.json`; 
-        a.click();
-    } catch(e) { alert(e.message); }
-    btn.innerHTML = "تصدير JSON"; btn.disabled = false;
-};
-
-
-el('btn-delete-filtered').onclick = async () => {
-    const t = el('delete-topic').value; 
-    const diff = el('delete-diff').value;
-    if(!t) return;
-    
-    if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff ? 'بصعوبة '+diff : 'بكل الصعوبات'}؟`)) return;
-    
-    const btn = el('btn-delete-filtered'); 
-    const originalText = btn.innerText;
-    
-    // 1. إضافة حالة التحميل
-    btn.innerText = "جاري الحذف...";
-    btn.disabled = true;
-
-    try {
-        const constr = [where("topic","==",t)]; 
-        if(diff) constr.push(where("difficulty","==",diff));
-        
-        const snap = await getDocs(query(collection(db,"questions"), ...constr));
-        
-        if(snap.empty) { 
-            toast("لا توجد أسئلة مطابقة للحذف", "info"); 
-        }
-        else {
-            const batch = writeBatch(db); 
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit(); 
-            // 2. رسالة نجاح واضحة
-            toast(`تم حذف ${snap.size} سؤال بنجاح 🗑️`, "delete"); 
-            loadStats();
-            isCacheLoaded = false;
-        }
-    } catch(e) { 
-        alert("خطأ: " + e.message); 
-    } finally {
-        // 3. إعادة حالة الزر الأصلية
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-};
-
-// Nuke (Delete All Questions)
-el('btn-nuke').onclick = async () => { 
-    if(prompt("تحذير: هذا سيحذف جميع الأسئلة! اكتب 'حذف الكل' للتأكيد:") === "حذف الكل") { 
-        const s = await getDocs(collection(db,"questions")); 
-        const b = writeBatch(db); 
-        let c=0; 
-        s.forEach(d => { b.delete(d.ref); c++; }); 
-        if(c>0) await b.commit(); 
-        alert(`تم حذف ${c} سؤال.`); 
-        loadStats(); 
-    } 
-};
-
-
-// ------------------------------------
-// MIGRATION ENGINE (Import/Export with IDs)
-// ------------------------------------
-
-/**
- * دالة استعادة التواريخ بعد الترحيل
- */
-function restoreTimestamps(obj) {
-    if (obj === null || typeof obj !== 'object') return obj;
-    
-    if (obj.hasOwnProperty('seconds') && obj.hasOwnProperty('nanoseconds') && Object.keys(obj).length === 2) {
-        return new window.Timestamp(obj.seconds, obj.nanoseconds);
-    }
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => restoreTimestamps(item));
-    }
-
-    const newObj = {};
-    for (const key in obj) {
-        newObj[key] = restoreTimestamps(obj[key]);
-    }
-    return newObj;
-}
-
-/**
- * دالة التصدير العامة (تحفظ البيانات مع ID الأصلي)
- */
-/**
- * دالة التصدير العامة (تحفظ البيانات مع ID الأصلي)
- */
-async function exportCollection(colName, filename, btnId) {
-    const btn = el(btnId);
-    const originalContent = btn.innerHTML;
-    
-    // 1. إظهار حالة التحميل
-    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...`;
-    btn.disabled = true;
-
-    try {
-        const snap = await getDocs(collection(db, colName));
-        const data = [];
-        snap.forEach(d => {
-            data.push({ _docId: d.id, ...d.data() });
-        });
-
-        if (data.length === 0) {
-             throw new Error("لا توجد بيانات لتصديرها.");
-        }
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${filename}_(${data.length})_${new Date().toISOString().slice(0,10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // 2. رسالة نجاح واضحة
-        toast(`تم تصدير ${data.length} مستند بنجاح ✅`, "download");
-    } catch (e) {
-        console.error(e);
-        alert("خطأ في التصدير: " + e.message);
-    } finally {
-        // 3. إعادة حالة الزر الأصلية
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-    }
-}
-
-/**
- * دالة الاستيراد العامة (تستعيد البيانات بنفس الـ ID)
- */
-async function importCollection(colName, fileInputId, progressId) {
-    const input = el(fileInputId);
-    const file = input.files[0];
-    if (!file) return;
-
-    const progressEl = el(progressId);
-    
-    // 1. مؤشر حالة التحليل
-    progressEl.innerText = "جاري قراءة الملف...";
-    progressEl.className = "text-xs text-center mt-2 text-amber-500 font-bold";
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            let data = JSON.parse(e.target.result);
-            if (!Array.isArray(data)) throw new Error("الملف لا يحتوي على مصفوفة بيانات صالحة");
-
-            // 2. مؤشر حالة الرفع
-            progressEl.innerText = `تم العثور على ${data.length} عنصر. جاري الرفع... (قد يستغرق وقتاً)`;
-            
-            let successCount = 0;
-            let errorCount = 0;
-            const BATCH_SIZE = 10;
-            let batch = writeBatch(db);
-
-            for (let i = 0; i < data.length; i++) {
-                let item = data[i];
-                const docId = item._docId; 
-                
-                if (!docId) { console.warn("عنصر بدون ID:", item); errorCount++; continue; }
-
-                delete item._docId;
-                item = restoreTimestamps(item);
-
-                batch.set(doc(db, colName, docId), item);
-                
-                if ((i + 1) % BATCH_SIZE === 0 || i === data.length - 1) { // تنفيذ الدفعة الأخيرة أيضاً
-                    await batch.commit();
-                    batch = writeBatch(db); 
-                    // 3. التحديث اللحظي للتقدم
-                    progressEl.innerText = `جاري المعالجة: ${i + 1} / ${data.length}`;
-                }
-                successCount++;
-            }
-            // تنفيذ الدفعة الأخيرة (تم دمجها في الشرط أعلاه، لكن نترك هذه للحماية)
-            // if (successCount % BATCH_SIZE !== 0) await batch.commit(); 
-
-            progressEl.innerText = `✅ تم! نجح: ${successCount} | فشل: ${errorCount}`;
-            progressEl.className = "text-xs text-center mt-2 text-green-400 font-bold";
-            toast(`تم استيراد ${successCount} مستند بنجاح`);
-            
-            if(colName === 'questions') { loadStats(); isCacheLoaded = false; }
-            if(colName === 'users') loadUsers();
-            
-            input.value = '';
-
-        } catch (err) {
-            console.error(err);
-            alert("فشل الاستيراد! الملف تالف أو غير متوافق.\n" + err.message);
-            progressEl.innerText = "❌ حدث خطأ";
-            progressEl.className = "text-xs text-center mt-2 text-red-500 font-bold";
-        }
-    };
-    reader.readAsText(file);
-}
-
-// --- ربط أزرار الترحيل ---
-el('btn-export-users-json').onclick = () => exportCollection('users', 'Users_Backup', 'btn-export-users-json');
-el('file-import-users').onchange = () => importCollection('users', 'file-import-users', 'progress-users');
-
-el('btn-export-questions-json').onclick = () => exportCollection('questions', 'Questions_Backup', 'btn-export-questions-json');
-el('file-import-questions').onchange = () => importCollection('questions', 'file-import-questions', 'progress-questions');
-
-// تصدير "أخرى" (البلاغات والنظام)
-el('btn-export-others-json').onclick = async () => {
-     const btn = el('btn-export-others-json');
-     const originalText = btn.innerHTML;
-     
-     btn.disabled = true; 
-     btn.innerHTML = '<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...'; // مؤشر تحميل
-     
-     try {
-         const reports = []; (await getDocs(collection(db, "reports"))).forEach(d => reports.push({_docId: d.id, ...d.data(), _collection: 'reports'}));
-         const system = []; (await getDocs(collection(db, "system"))).forEach(d => system.push({_docId: d.id, ...d.data(), _collection: 'system'}));
-         const combined = [...reports, ...system];
-         
-         if (combined.length === 0) {
-             toast("لا توجد بيانات أخرى لتصديرها.", "info");
-             return;
-         }
-         
-         const blob = new Blob([JSON.stringify(combined, null, 2)], { type: 'application/json' });
-         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Others_Backup_${combined.length}.json`;
-         document.body.appendChild(a); a.click(); document.body.removeChild(a);
-         
-         toast(`تم تصدير ${combined.length} عنصر بنجاح ✅`);
-     } catch(e) { 
-         alert(e.message); 
-     } finally {
-         btn.innerHTML = originalText; 
-         btn.disabled = false;
-     }
-};
-
-// استيراد "أخرى"
-el('file-import-others').onchange = () => {
-    const input = el('file-import-others');
-    const file = input.files[0];
-    if (!file) return;
-    const progress = el('progress-others');
-    progress.innerText = "جاري التحليل...";
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            let count = 0;
-            const batch = writeBatch(db);
-            
-            for(let item of data) {
-                const col = item._collection;
-                const id = item._docId;
-                delete item._collection; delete item._docId;
-                item = restoreTimestamps(item);
-                
-                if(col && id) {
-                    batch.set(doc(db, col, id), item);
-                    count++;
-                }
-                
-                if (count % 10 === 0) {
-                     await batch.commit();
-                     batch = writeBatch(db);
-                     progress.innerText = `تم استعادة ${count} عنصر...`;
-                }
-            }
-            await batch.commit();
-
-            progress.innerText = `✅ تم استعادة ${count} عنصر بنجاح`;
-            toast(`تم استيراد ${count} إعداد/تقرير`);
-            input.value = '';
-        } catch (error) {
-            console.error(error);
-            progress.innerText = "❌ حدث خطأ في الاستيراد";
-        }
-    };
-    reader.readAsText(file);
 };
 
 function renderQuestionCard(d, container) {
@@ -1562,7 +1275,8 @@ function renderQuestionCard(d, container) {
         const newCorrect = checkedRadio ? parseInt(checkedRadio.value) : (d.correctAnswer || 0);
 
         if(!newQ || !newOptions[0] || !newOptions[1]) {
-            return toast("يرجى ملء السؤال والخيارات الأساسية", "warning");
+            toast("يرجى ملء السؤال والخيارات الأساسية", "warning");
+            return;
         }
 
         btn.innerHTML = '<span class="material-symbols-rounded spinner text-sm">sync</span>';
@@ -1609,26 +1323,32 @@ function renderQuestionCard(d, container) {
         btn.innerHTML = '...'; 
         
         const newStatus = !d.isReviewed;
-        await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
-        d.isReviewed = newStatus;
         
-        const currentFilter = document.getElementById('manage-status-filter').value;
-        
-        if (currentFilter === 'unreviewed' && newStatus === true) {
-            div.style.transition = "all 0.5s ease";
-            div.style.opacity = '0';
-            div.style.transform = 'translateX(-50px)';
-            setTimeout(() => {
-                div.remove();
-                const countEl = document.getElementById('qs-counter');
-                if(countEl) countEl.innerText = document.querySelectorAll('#questions-grid .admin-item').length;
-                toast("تم الاعتماد وإزالة السؤال من القائمة 🚀");
-            }, 500);
-        } else {
-            const newDiv = renderQuestionCard(d, container);
-            const oldDiv = document.getElementById(`q-row-${d.id}`);
-            if(oldDiv && newDiv !== oldDiv) oldDiv.replaceWith(newDiv);
-            toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
+        try {
+            await updateDoc(doc(db, "questions", d.id), { isReviewed: newStatus });
+            d.isReviewed = newStatus;
+            
+            const currentFilter = document.getElementById('manage-status-filter').value;
+            
+            if (currentFilter === 'unreviewed' && newStatus === true) {
+                div.style.transition = "all 0.5s ease";
+                div.style.opacity = '0';
+                div.style.transform = 'translateX(-50px)';
+                setTimeout(() => {
+                    div.remove();
+                    const countEl = document.getElementById('qs-counter');
+                    if(countEl) countEl.innerText = document.querySelectorAll('#questions-grid .admin-item').length;
+                    toast("تم الاعتماد وإزالة السؤال من القائمة 🚀");
+                }, 500);
+            } else {
+                const newDiv = renderQuestionCard(d, container);
+                const oldDiv = document.getElementById(`q-row-${d.id}`);
+                if(oldDiv && newDiv !== oldDiv) oldDiv.replaceWith(newDiv);
+                toast(newStatus ? "تم الاعتماد" : "تم إلغاء الاعتماد");
+            }
+        } catch (error) {
+            console.error(error);
+            toast("خطأ في تغيير حالة المراجعة", "error");
         }
     };
 
@@ -1638,138 +1358,55 @@ function renderQuestionCard(d, container) {
     return div;
 }
 
-function showAIResultModal(analysis, qData) { 
-    const modal = document.getElementById('ai-modal');
-    const statusBadge = document.getElementById('ai-status-badge');
-    const feedbackText = document.getElementById('ai-feedback-text');
-    const suggestQ = document.getElementById('ai-suggested-q');
-    const suggestExp = document.getElementById('ai-suggested-exp');
-    const applyBtn = document.getElementById('btn-apply-ai-fix');
-    const correctionSection = document.getElementById('ai-correction-section');
-    
-    // --- قسم الخيارات المقترحة ---
-    let optionsSection = document.getElementById('ai-options-section');
-    if (!optionsSection) {
-        const container = document.querySelector('#ai-modal .space-y-4');
-        if(container) {
-            optionsSection = document.createElement('div');
-            optionsSection.id = 'ai-options-section';
-            optionsSection.className = 'hidden space-y-2 fade-in border-t border-slate-700/50 pt-2';
-            optionsSection.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <h4 class="text-xs text-purple-400 font-bold">🎯 خيارات مموهة مقترحة:</h4>
-                    <button id="btn-use-options" class="text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded transition">استخدمها</button>
-                </div>
-                <div id="ai-options-list" class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 font-mono"></div>
-            `;
-            suggestExp.parentElement.parentElement.insertBefore(optionsSection, suggestExp.parentElement);
-        }
-    }
+// =========================================================
+// 9. AI SETTINGS & ANALYSIS
+// =========================================================
 
-    // 1. تعبئة البيانات
-    feedbackText.innerText = analysis.feedback;
-    suggestQ.value = analysis.correction || qData.question;
-    suggestExp.value = analysis.suggested_explanation || qData.explanation || "";
+function loadAISettings() {
+    const key = localStorage.getItem('gemini_api_key');
+    const model = localStorage.getItem('gemini_model');
+    const prompt = localStorage.getItem('gemini_custom_prompt');
 
-    // 2. معالجة الخيارات المقترحة
-    const optionsList = document.getElementById('ai-options-list');
-    const btnUseOptions = document.getElementById('btn-use-options');
-    
-    if (analysis.suggested_options && analysis.suggested_options.length > 0) {
-        optionsSection.classList.remove('hidden');
-        optionsList.innerHTML = analysis.suggested_options.map(opt => 
-            `<div class="bg-slate-800 p-2 rounded border border-slate-700 text-center truncate" title="${opt}">${opt}</div>`
-        ).join('');
-        
-        btnUseOptions.onclick = () => {
-            const currentCorrect = qData.options[qData.correctAnswer];
-            const inputCorrect = document.getElementById(`inline-opt-${qData.id}-${qData.correctAnswer}`);
-            if(inputCorrect) inputCorrect.value = currentCorrect;
-
-            let distractorIndex = 0;
-            for(let i=0; i<4; i++) {
-                if(i !== qData.correctAnswer && analysis.suggested_options[distractorIndex]) {
-                    const inputWrong = document.getElementById(`inline-opt-${qData.id}-${i}`);
-                    if(inputWrong) {
-                        inputWrong.value = analysis.suggested_options[distractorIndex];
-                        inputWrong.parentElement.classList.add('ring-2', 'ring-purple-500/50');
-                        setTimeout(()=> inputWrong.parentElement.classList.remove('ring-2', 'ring-purple-500/50'), 1000);
-                    }
-                    distractorIndex++;
-                }
-            }
-            toast("تم تعبئة الخيارات (اضغط حفظ لتثبيتها)", "check_circle");
-        };
-    } else {
-        if(optionsSection) optionsSection.classList.add('hidden');
-    }
-
-    // 3. ضبط الحالة والألوان
-    if (analysis.status.includes("سليم") || analysis.status.includes("Sound")) {
-        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
-        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">check_circle</span> تقييم السؤال: ${analysis.status}`;
-    } else {
-        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-amber-900/20 text-amber-500 border-amber-500/50";
-        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">warning</span> ملاحظة: ${analysis.status}`;
-    }
-
-    correctionSection.classList.remove('hidden');
-    const correctionLabel = correctionSection.querySelector('h4');
-    if(correctionLabel) correctionLabel.innerHTML = '✨ الصياغة البلاغية المقترحة:';
-
-    // 4. برمجة زر التطبيق (التعديل الجوهري هنا: حفظ في قاعدة البيانات)
-    applyBtn.onclick = async () => {
-        const originalText = applyBtn.innerHTML;
-        applyBtn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري الحفظ...`;
-        applyBtn.disabled = true;
-
-        try {
-            const newQ = suggestQ.value;
-            const newExp = suggestExp.value;
-
-            // تحديث قاعدة البيانات مباشرة
-            await updateDoc(doc(db, "questions", qData.id), { 
-                question: newQ,
-                explanation: newExp
-            });
-
-            // تحديث الواجهة
-            const qInput = document.getElementById(`inline-q-${qData.id}`);
-            const expInput = document.getElementById(`inline-exp-${qData.id}`);
-
-            if (qInput) {
-                qInput.value = newQ;
-                qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
-                setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1500);
-            }
-            if (expInput) {
-                expInput.value = newExp;
-                expInput.classList.add('border-green-500');
-            }
-
-            modal.classList.remove('active', 'flex');
-            modal.classList.add('hidden');
-            
-            toast("تم تطبيق التعديلات وحفظها في قاعدة البيانات ✅", "save");
-
-        } catch (e) {
-            console.error(e);
-            toast("حدث خطأ أثناء الحفظ التلقائي", "error");
-        } finally {
-            applyBtn.innerHTML = originalText;
-            applyBtn.disabled = false;
-        }
-    };
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex', 'active');
-    setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95'), 10);
+    if(el('ai-api-key')) el('ai-api-key').value = key || '';
+    if(el('ai-model-name')) el('ai-model-name').value = model || 'gemini-1.5-flash';
+    if(el('ai-custom-prompt')) el('ai-custom-prompt').value = prompt || '';
 }
 
+function setupAI() {
+    const saveBtn = el('btn-save-ai-settings');
+    
+    if (!saveBtn) {
+        console.error("Save AI Button not found in DOM!");
+        return;
+    }
+
+    saveBtn.onclick = () => {
+        const key = el('ai-api-key')?.value.trim();
+        const model = el('ai-model-name')?.value.trim();
+        const prompt = el('ai-custom-prompt')?.value.trim();
+
+        if(!key) {
+            toast("يرجى إدخال مفتاح API", "warning");
+            return;
+        }
+
+        try {
+            localStorage.setItem('gemini_api_key', key);
+            localStorage.setItem('gemini_model', model || 'gemini-1.5-flash');
+            localStorage.setItem('gemini_custom_prompt', prompt || '');
+            
+            toast("تم حفظ إعدادات AI بنجاح ✅");
+        } catch (e) {
+            console.error("Storage Error:", e);
+            alert("تعذر الحفظ في المتصفح: " + e.message);
+        }
+    };
+}
 
 async function checkQuestionWithAI(questionData) {
     if (!window.GoogleGenerativeAI) {
-        return toast("مكتبة الذكاء الاصطناعي غير محملة!", "error");
+        toast("مكتبة الذكاء الاصطناعي غير محملة!", "error");
+        return;
     }
 
     const apiKey = localStorage.getItem('gemini_api_key');
@@ -1778,7 +1415,8 @@ async function checkQuestionWithAI(questionData) {
 
     if (!apiKey) {
         toast("يرجى ضبط مفتاح API من إعدادات AI أولاً", "settings");
-        return triggerTab('view-ai-settings');
+        triggerTab('view-ai-settings');
+        return;
     }
 
     const btnIcon = document.getElementById(`ai-icon-${questionData.id}`);
@@ -1842,56 +1480,551 @@ async function checkQuestionWithAI(questionData) {
     }
 }
 
-// =========================================================
-// AI SETTINGS MANAGEMENT (FIXED)
-// =========================================================
-
-// دالة لتحميل الإعدادات للحقول
-function loadAISettings() {
-    console.log("Loading AI Settings...");
-    const key = localStorage.getItem('gemini_api_key');
-    const model = localStorage.getItem('gemini_model');
-    const prompt = localStorage.getItem('gemini_custom_prompt');
-
-    if(el('ai-api-key')) el('ai-api-key').value = key || '';
-    if(el('ai-model-name')) el('ai-model-name').value = model || 'gemini-1.5-flash';
-    if(el('ai-custom-prompt')) el('ai-custom-prompt').value = prompt || '';
-}
-
-// دالة لتهيئة الزر (يتم استدعاؤها في الأعلى)
-function setupAI() {
-    const saveBtn = el('btn-save-ai-settings');
+function showAIResultModal(analysis, qData) { 
+    const modal = document.getElementById('ai-modal');
+    const statusBadge = document.getElementById('ai-status-badge');
+    const feedbackText = document.getElementById('ai-feedback-text');
+    const suggestQ = document.getElementById('ai-suggested-q');
+    const suggestExp = document.getElementById('ai-suggested-exp');
+    const applyBtn = document.getElementById('btn-apply-ai-fix');
+    const correctionSection = document.getElementById('ai-correction-section');
     
-    if (!saveBtn) {
-        console.error("Critical: Save AI Button not found in DOM!");
+    if (!modal || !statusBadge || !feedbackText || !suggestQ || !suggestExp || !applyBtn || !correctionSection) {
+        console.error("AI modal elements not found");
         return;
     }
 
-    // إزالة أي ارتباط سابق لتجنب التكرار
-    saveBtn.onclick = null;
+    // 1. تعبئة البيانات
+    feedbackText.innerText = analysis.feedback;
+    suggestQ.value = analysis.correction || qData.question;
+    suggestExp.value = analysis.suggested_explanation || qData.explanation || "";
 
-    saveBtn.onclick = () => {
-        console.log("Save button clicked!"); // للتأكد من الضغط
-        
-        const key = el('ai-api-key')?.value.trim();
-        const model = el('ai-model-name')?.value.trim();
-        const prompt = el('ai-custom-prompt')?.value.trim();
+    // 2. معالجة الخيارات المقترحة
+    const optionsList = document.getElementById('ai-options-list');
+    const btnUseOptions = document.getElementById('btn-use-options');
+    
+    if (analysis.suggested_options && analysis.suggested_options.length > 0) {
+        const optionsSection = document.getElementById('ai-options-section');
+        if (optionsSection) {
+            optionsSection.classList.remove('hidden');
+            if (optionsList) {
+                optionsList.innerHTML = analysis.suggested_options.map(opt => 
+                    `<div class="bg-slate-800 p-2 rounded border border-slate-700 text-center truncate" title="${opt}">${opt}</div>`
+                ).join('');
+            }
+            
+            if (btnUseOptions) {
+                btnUseOptions.onclick = () => {
+                    const currentCorrect = qData.options[qData.correctAnswer];
+                    const inputCorrect = document.getElementById(`inline-opt-${qData.id}-${qData.correctAnswer}`);
+                    if(inputCorrect) inputCorrect.value = currentCorrect;
 
-        if(!key) {
-            toast("يرجى إدخال مفتاح API", "warning");
-            return;
+                    let distractorIndex = 0;
+                    for(let i=0; i<4; i++) {
+                        if(i !== qData.correctAnswer && analysis.suggested_options[distractorIndex]) {
+                            const inputWrong = document.getElementById(`inline-opt-${qData.id}-${i}`);
+                            if(inputWrong) {
+                                inputWrong.value = analysis.suggested_options[distractorIndex];
+                                inputWrong.parentElement.classList.add('ring-2', 'ring-purple-500/50');
+                                setTimeout(()=> inputWrong.parentElement.classList.remove('ring-2', 'ring-purple-500/50'), 1000);
+                            }
+                            distractorIndex++;
+                        }
+                    }
+                    toast("تم تعبئة الخيارات (اضغط حفظ لتثبيتها)", "check_circle");
+                };
+            }
         }
+    }
+
+    // 3. ضبط الحالة والألوان
+    if (analysis.status.includes("سليم") || analysis.status.includes("Sound")) {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-green-900/20 text-green-400 border-green-500/50";
+        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">check_circle</span> تقييم السؤال: ${analysis.status}`;
+    } else {
+        statusBadge.className = "px-4 py-1 rounded-full text-sm font-bold border flex items-center gap-2 bg-amber-900/20 text-amber-500 border-amber-500/50";
+        statusBadge.innerHTML = `<span class="material-symbols-rounded text-base">warning</span> ملاحظة: ${analysis.status}`;
+    }
+
+    correctionSection.classList.remove('hidden');
+    const correctionLabel = correctionSection.querySelector('h4');
+    if(correctionLabel) correctionLabel.innerHTML = '✨ الصياغة البلاغية المقترحة:';
+
+    // 4. برمجة زر التطبيق
+    applyBtn.onclick = async () => {
+        const originalText = applyBtn.innerHTML;
+        applyBtn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري الحفظ...`;
+        applyBtn.disabled = true;
 
         try {
-            localStorage.setItem('gemini_api_key', key);
-            localStorage.setItem('gemini_model', model || 'gemini-1.5-flash');
-            localStorage.setItem('gemini_custom_prompt', prompt || '');
+            const newQ = suggestQ.value;
+            const newExp = suggestExp.value;
+
+            await updateDoc(doc(db, "questions", qData.id), { 
+                question: newQ,
+                explanation: newExp
+            });
+
+            const qInput = document.getElementById(`inline-q-${qData.id}`);
+            const expInput = document.getElementById(`inline-exp-${qData.id}`);
+
+            if (qInput) {
+                qInput.value = newQ;
+                qInput.parentElement.classList.add('ring-2', 'ring-green-500/50');
+                setTimeout(()=>qInput.parentElement.classList.remove('ring-2', 'ring-green-500/50'), 1500);
+            }
+            if (expInput) {
+                expInput.value = newExp;
+                expInput.classList.add('border-green-500');
+            }
+
+            modal.classList.remove('active', 'flex');
+            modal.classList.add('hidden');
             
-            console.log("Saved to LocalStorage:", { key: "***", model });
-            toast("تم حفظ إعدادات AI بنجاح ✅");
+            toast("تم تطبيق التعديلات وحفظها في قاعدة البيانات ✅", "save");
+
         } catch (e) {
-            console.error("Storage Error:", e);
-            alert("تعذر الحفظ في المتصفح: " + e.message);
+            console.error(e);
+            toast("حدث خطأ أثناء الحفظ التلقائي", "error");
+        } finally {
+            applyBtn.innerHTML = originalText;
+            applyBtn.disabled = false;
         }
     };
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex', 'active');
+    setTimeout(() => {
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) modalContent.classList.remove('scale-95');
+    }, 10);
 }
+
+// =========================================================
+// 10. SYSTEM & MIGRATION LOGIC
+// =========================================================
+
+async function loadWhatsNewSettings() {
+    try {
+        const docSnap = await getDoc(doc(db, "system", "whats_new"));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (el('news-message-input')) el('news-message-input').value = data.message || '';
+            if (el('news-active-toggle')) el('news-active-toggle').checked = data.isActive || false;
+        }
+    } catch (e) { 
+        console.error("Error loading news settings:", e); 
+    }
+}
+
+el('btn-save-news').onclick = async () => {
+    const btn = el('btn-save-news');
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري الحفظ...`;
+    btn.disabled = true;
+
+    const message = el('news-message-input').value;
+    const isActive = el('news-active-toggle').checked;
+
+    try {
+        await setDoc(doc(db, "system", "whats_new"), {
+            message: message,
+            isActive: isActive,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        const msgEl = el('news-status-msg');
+        if (msgEl) {
+            msgEl.style.opacity = '1';
+            msgEl.className = isActive ? "text-xs font-bold self-center text-green-400" : "text-xs font-bold self-center text-slate-400";
+            msgEl.innerText = isActive ? "تم النشر والتفعيل ✅" : "تم الحفظ (معطل) ⏸️";
+            
+            setTimeout(() => { msgEl.style.opacity = '0'; }, 3000);
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("حدث خطأ أثناء الحفظ: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
+el('btn-export-filtered').onclick = async () => {
+    const cat = el('export-cat').value, t = el('export-topic').value, diff = el('export-diff').value;
+    const btn = el('btn-export-filtered');
+    
+    if (!btn) return;
+    
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span>`; 
+    btn.disabled = true;
+    
+    try {
+        const targets = t ? [t] : (topics[cat] || []);
+        const data = [];
+        
+        await Promise.all(targets.map(async sub => {
+            const c = [where("topic","==",sub)];
+            if(diff) c.push(where("difficulty","==",diff));
+            const s = await getDocs(query(collection(db,"questions"), ...c));
+            s.forEach(d => { 
+                let x = d.data(); 
+                delete x.createdAt; 
+                data.push(x); 
+            });
+        }));
+
+        if(data.length === 0) throw new Error("لا توجد بيانات لتصديرها");
+        
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); 
+        a.download = `Export_${t || cat}_${diff||'All'}.json`; 
+        a.click();
+    } catch(e) { 
+        alert(e.message); 
+    } finally {
+        btn.innerHTML = "تصدير JSON"; 
+        btn.disabled = false;
+    }
+};
+
+el('btn-delete-filtered').onclick = async () => {
+    const t = el('delete-topic').value; 
+    const diff = el('delete-diff').value;
+    
+    if(!t) return;
+    
+    if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff ? 'بصعوبة '+diff : 'بكل الصعوبات'}؟`)) return;
+    
+    const btn = el('btn-delete-filtered'); 
+    if (!btn) return;
+    
+    const originalText = btn.innerText;
+    btn.innerText = "جاري الحذف...";
+    btn.disabled = true;
+
+    try {
+        const constr = [where("topic","==",t)]; 
+        if(diff) constr.push(where("difficulty","==",diff));
+        
+        const snap = await getDocs(query(collection(db,"questions"), ...constr));
+        
+        if(snap.empty) { 
+            toast("لا توجد أسئلة مطابقة للحذف", "info"); 
+        } else {
+            const batch = writeBatch(db); 
+            snap.forEach(d => batch.delete(d.ref));
+            await batch.commit(); 
+            toast(`تم حذف ${snap.size} سؤال بنجاح 🗑️`, "delete"); 
+            loadStats();
+            isCacheLoaded = false;
+        }
+    } catch(e) { 
+        alert("خطأ: " + e.message); 
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+};
+
+el('btn-nuke').onclick = async () => { 
+    if(prompt("تحذير: هذا سيحذف جميع الأسئلة! اكتب 'حذف الكل' للتأكيد:") === "حذف الكل") { 
+        const s = await getDocs(collection(db,"questions")); 
+        const b = writeBatch(db); 
+        let c = 0; 
+        s.forEach(d => { b.delete(d.ref); c++; }); 
+        if(c > 0) await b.commit(); 
+        alert(`تم حذف ${c} سؤال.`); 
+        loadStats(); 
+    } 
+};
+
+// ------------------------------------
+// MIGRATION ENGINE (Import/Export with IDs)
+// ------------------------------------
+
+function restoreTimestamps(obj) {
+    if (obj === null || typeof obj !== 'object') return obj;
+    
+    if (obj.hasOwnProperty('seconds') && obj.hasOwnProperty('nanoseconds') && Object.keys(obj).length === 2) {
+        return new window.Timestamp(obj.seconds, obj.nanoseconds);
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => restoreTimestamps(item));
+    }
+
+    const newObj = {};
+    for (const key in obj) {
+        newObj[key] = restoreTimestamps(obj[key]);
+    }
+    return newObj;
+}
+
+async function exportCollection(colName, filename, btnId) {
+    const btn = el(btnId);
+    if (!btn) return;
+    
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...`;
+    btn.disabled = true;
+
+    try {
+        const snap = await getDocs(collection(db, colName));
+        const data = [];
+        snap.forEach(d => {
+            data.push({ _docId: d.id, ...d.data() });
+        });
+
+        if (data.length === 0) {
+            throw new Error("لا توجد بيانات لتصديرها.");
+        }
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}_(${data.length})_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        toast(`تم تصدير ${data.length} مستند بنجاح ✅`, "download");
+    } catch (e) {
+        console.error(e);
+        alert("خطأ في التصدير: " + e.message);
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+async function importCollection(colName, fileInputId, progressId) {
+    const input = el(fileInputId);
+    const file = input.files[0];
+    if (!file) return;
+
+    const progressEl = el(progressId);
+    if (!progressEl) return;
+    
+    progressEl.innerText = "جاري قراءة الملف...";
+    progressEl.className = "text-xs text-center mt-2 text-amber-500 font-bold";
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            let data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error("الملف لا يحتوي على مصفوفة بيانات صالحة");
+
+            progressEl.innerText = `تم العثور على ${data.length} عنصر. جاري الرفع... (قد يستغرق وقتاً)`;
+            
+            let successCount = 0;
+            let errorCount = 0;
+            const BATCH_SIZE = 10;
+            let batch = writeBatch(db);
+
+            for (let i = 0; i < data.length; i++) {
+                let item = data[i];
+                const docId = item._docId; 
+                
+                if (!docId) { 
+                    console.warn("عنصر بدون ID:", item); 
+                    errorCount++; 
+                    continue; 
+                }
+
+                delete item._docId;
+                item = restoreTimestamps(item);
+
+                batch.set(doc(db, colName, docId), item);
+                
+                if ((i + 1) % BATCH_SIZE === 0 || i === data.length - 1) {
+                    await batch.commit();
+                    batch = writeBatch(db); 
+                    progressEl.innerText = `جاري المعالجة: ${i + 1} / ${data.length}`;
+                }
+                successCount++;
+            }
+
+            progressEl.innerText = `✅ تم! نجح: ${successCount} | فشل: ${errorCount}`;
+            progressEl.className = "text-xs text-center mt-2 text-green-400 font-bold";
+            toast(`تم استيراد ${successCount} مستند بنجاح`);
+            
+            if(colName === 'questions') { 
+                loadStats(); 
+                isCacheLoaded = false; 
+            }
+            if(colName === 'users') loadUsers();
+            
+            input.value = '';
+
+        } catch (err) {
+            console.error(err);
+            alert("فشل الاستيراد! الملف تالف أو غير متوافق.\n" + err.message);
+            progressEl.innerText = "❌ حدث خطأ";
+            progressEl.className = "text-xs text-center mt-2 text-red-500 font-bold";
+        }
+    };
+    reader.readAsText(file);
+}
+
+// --- ربط أزرار الترحيل ---
+el('btn-export-users-json').onclick = () => exportCollection('users', 'Users_Backup', 'btn-export-users-json');
+el('file-import-users').onchange = () => importCollection('users', 'file-import-users', 'progress-users');
+
+el('btn-export-questions-json').onclick = () => exportCollection('questions', 'Questions_Backup', 'btn-export-questions-json');
+el('file-import-questions').onchange = () => importCollection('questions', 'file-import-questions', 'progress-questions');
+
+el('btn-export-others-json').onclick = async () => {
+     const btn = el('btn-export-others-json');
+     if (!btn) return;
+     
+     const originalText = btn.innerHTML;
+     btn.disabled = true; 
+     btn.innerHTML = '<span class="material-symbols-rounded spinner">sync</span> جاري التصدير...';
+     
+     try {
+         const reports = []; 
+         const reportsSnap = await getDocs(collection(db, "reports"));
+         reportsSnap.forEach(d => reports.push({_docId: d.id, ...d.data(), _collection: 'reports'}));
+         
+         const system = []; 
+         const systemSnap = await getDocs(collection(db, "system"));
+         systemSnap.forEach(d => system.push({_docId: d.id, ...d.data(), _collection: 'system'}));
+         
+         const combined = [...reports, ...system];
+         
+         if (combined.length === 0) {
+             toast("لا توجد بيانات أخرى لتصديرها.", "info");
+             return;
+         }
+         
+         const blob = new Blob([JSON.stringify(combined, null, 2)], { type: 'application/json' });
+         const a = document.createElement('a'); 
+         a.href = URL.createObjectURL(blob); 
+         a.download = `Others_Backup_${combined.length}.json`;
+         document.body.appendChild(a); 
+         a.click(); 
+         document.body.removeChild(a);
+         
+         toast(`تم تصدير ${combined.length} عنصر بنجاح ✅`);
+     } catch(e) { 
+         alert(e.message); 
+     } finally {
+         btn.innerHTML = originalText; 
+         btn.disabled = false;
+     }
+};
+
+el('file-import-others').onchange = () => {
+    const input = el('file-import-others');
+    const file = input.files[0];
+    if (!file) return;
+    
+    const progress = el('progress-others');
+    if (!progress) return;
+    
+    progress.innerText = "جاري التحليل...";
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            let count = 0;
+            const batch = writeBatch(db);
+            
+            for(let item of data) {
+                const col = item._collection;
+                const id = item._docId;
+                delete item._collection; 
+                delete item._docId;
+                item = restoreTimestamps(item);
+                
+                if(col && id) {
+                    batch.set(doc(db, col, id), item);
+                    count++;
+                }
+                
+                if (count % 10 === 0) {
+                     await batch.commit();
+                     batch = writeBatch(db);
+                     progress.innerText = `تم استعادة ${count} عنصر...`;
+                }
+            }
+            await batch.commit();
+
+            progress.innerText = `✅ تم استعادة ${count} عنصر بنجاح`;
+            toast(`تم استيراد ${count} إعداد/تقرير`);
+            input.value = '';
+        } catch (error) {
+            console.error(error);
+            progress.innerText = "❌ حدث خطأ في الاستيراد";
+        }
+    };
+    reader.readAsText(file);
+};
+
+// =========================================================
+// 11. INITIALIZATION
+// =========================================================
+
+function bindEventHandlers() {
+    // تحميل إعدادات "ما الجديد"
+    loadWhatsNewSettings();
+    
+    // إعداد AI
+    setupAI();
+    
+    // تهيئة القوائم المنسدلة
+    const checkBtn = () => {
+        const expCat = el('export-cat');
+        const btnExp = el('btn-export-filtered');
+        if(btnExp) btnExp.disabled = !expCat || !expCat.value;
+
+        const delTopic = el('delete-topic');
+        const btnDel = el('btn-delete-filtered');
+        if(btnDel) btnDel.disabled = !delTopic || !delTopic.value;
+    };
+    
+    initDrops('export-cat', 'export-topic', checkBtn);
+    initDrops('delete-cat', 'delete-topic', checkBtn);
+    
+    // تحميل الإحصائيات
+    loadStats();
+}
+
+// تسجيل الدخول المجهول وتهيئة التطبيق
+signInAnonymously(auth)
+    .then(() => { 
+        isAuthReady = true; 
+        console.log("Admin Auth Ready"); 
+        
+        // تهيئة جميع المعالجات بعد تحميل DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            bindEventHandlers();
+        });
+        
+        // تحميل الصفحة الافتراضية مباشرة
+        loadStats();
+        triggerTab('view-dashboard');
+    })
+    .catch(e => {
+        console.error("Firebase Auth Error:", e);
+        toast("خطأ في المصادقة مع Firebase", "error");
+    });
+
+// =========================================================
+// 12. GLOBAL HELPER FUNCTIONS
+// =========================================================
+
+// دالة مساعدة لإغلاق النماذج
+window.closeModal = (modalId) => {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active', 'flex');
+        modal.classList.add('hidden');
+    }
+};

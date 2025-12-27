@@ -2,7 +2,7 @@
   "name": "لوحة تحكم المطور - وحي",
   "short_name": "المطور",
   "start_url": "./index.html",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
   "description": "لوحة التحكم وإدارة المحتوى لتطبيق وحي أهل البيت (ع).",

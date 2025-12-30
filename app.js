@@ -1681,7 +1681,25 @@ el('btn-export-filtered').onclick = async () => {
         
         const a = document.createElement('a'); 
         a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); 
-        a.download = `Export_${t || cat}_${diff||'All'}.json`; 
+        
+        // Custom filename mapping based on category
+        const fileNameMap = {
+            "المعصومون (عليهم السلام)": "infallibles_all.json",
+            "الأنبياء والرسل": "prophets.json",
+            "شخصيات (أصحاب وعلماء ونساء)": "personalities.json",
+            "القرآن ونهج البلاغة": "quran_nahj.json",
+            "عقائد وفقه": "aqida_fiqh.json",
+            "الثقافة المهدوية": "mahdi_culture.json",
+            "تاريخ ومعارك": "history_battles.json",
+            "أدعية وزيارات": "dua_ziyarat.json"
+        };
+
+        if (!t && !diff && fileNameMap[cat]) {
+            a.download = fileNameMap[cat];
+        } else {
+            a.download = `Export_${t || cat}_${diff||'All'}.json`; 
+        }
+
         a.click();
     } catch(e) { 
         alert(e.message); 

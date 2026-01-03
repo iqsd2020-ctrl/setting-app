@@ -659,24 +659,29 @@ el('btn-delete-user-permanent').onclick = async () => {
     }
 };
 
-// معالجة رفع الصورة
-el('upload-new-avatar').onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-        toast("حجم الصورة كبير جداً", "warning");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        window.newAvatarBase64 = ev.target.result;
-        el('edit-avatar-preview').innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
-        show('btn-del-avatar');
-    };
-    reader.readAsDataURL(file);
+el('upload-new-avatar').onchange=(e)=>{
+const file=e.target.files[0];
+if(!file)return;
+const reader=new FileReader();
+reader.onload=(ev)=>{
+const img=new Image();
+img.src=ev.target.result;
+img.onload=()=>{
+const canvas=document.createElement('canvas');
+const ctx=canvas.getContext('2d');
+const MAX_W=300;
+const scale=MAX_W/img.width;
+canvas.width=MAX_W;
+canvas.height=img.height*scale;
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+const compressed=canvas.toDataURL('image/jpeg',0.7);
+window.newAvatarBase64=compressed;
+el('edit-avatar-preview').innerHTML=`<img src="${compressed}" class="w-full h-full object-cover">`;
+show('btn-del-avatar');
 };
-
+};
+reader.readAsDataURL(file);
+};
 el('btn-del-avatar').onclick = () => {
     window.newAvatarBase64 = ''; 
     el('edit-avatar-preview').innerHTML = `<span class="material-symbols-rounded text-slate-500 text-4xl">person</span>`;
@@ -1605,6 +1610,26 @@ function showAIResultModal(analysis, qData) {
 // =========================================================
 // 10. SYSTEM & MIGRATION LOGIC
 // =========================================================
+// ==========================================
+// PREVIEW NEWS FUNCTIONALITY
+// ==========================================
+
+el('btn-preview-news').onclick = () => {
+    const message = el('news-message-input').value;
+    const previewContainer = el('news-preview-content');
+    const modal = el('preview-news-modal');
+    if (!message.trim()) {
+        toast("الرجاء كتابة نص للمعاينة", "warning");
+        return;
+    }
+    previewContainer.innerHTML = message;
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.add('active', 'flex');
+        modal.classList.remove('opacity-0');
+        modal.querySelector('.modal-content').classList.remove('scale-95');
+    }, 10);
+};
 
 async function loadWhatsNewSettings() {
     try {
@@ -1711,55 +1736,83 @@ el('btn-export-filtered').onclick = async () => {
     }
 };
 
-el('btn-delete-filtered').onclick = async () => {
-    const t = el('delete-topic').value; 
-    const diff = el('delete-diff').value;
-    
-    if(!t) return;
-    
-    if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff ? 'بصعوبة '+diff : 'بكل الصعوبات'}؟`)) return;
-    
-    const btn = el('btn-delete-filtered'); 
-    if (!btn) return;
-    
-    const originalText = btn.innerText;
-    btn.innerText = "جاري الحذف...";
-    btn.disabled = true;
-
-    try {
-        const constr = [where("topic","==",t)]; 
-        if(diff) constr.push(where("difficulty","==",diff));
-        
-        const snap = await getDocs(query(collection(db,"questions"), ...constr));
-        
-        if(snap.empty) { 
-            toast("لا توجد أسئلة مطابقة للحذف", "info"); 
-        } else {
-            const batch = writeBatch(db); 
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit(); 
-            toast(`تم حذف ${snap.size} سؤال بنجاح 🗑️`, "delete"); 
-            loadStats();
-            isCacheLoaded = false;
-        }
-    } catch(e) { 
-        alert("خطأ: " + e.message); 
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
+el('btn-delete-filtered').onclick=async()=>{
+const t=el('delete-topic').value;
+const diff=el('delete-diff').value;
+if(!t)return;
+if(!confirm(`تحذير: هل أنت متأكد من حذف أسئلة موضوع (${t}) ${diff?'بصعوبة '+diff:'بكل الصعوبات'}؟`))return;
+const btn=el('btn-delete-filtered');
+if(!btn)return;
+const originalText=btn.innerText;
+btn.innerText="جاري الحذف...";
+btn.disabled=true;
+try{
+const constr=[where("topic","==",t)];
+if(diff)constr.push(where("difficulty","==",diff));
+const snap=await getDocs(query(collection(db,"questions"),...constr));
+if(snap.empty){
+toast("لا توجد أسئلة مطابقة للحذف","info");
+}else{
+const totalDocs=snap.docs.length;
+const CHUNK_SIZE=400;
+for(let i=0;i<totalDocs;i+=CHUNK_SIZE){
+const chunk=snap.docs.slice(i,i+CHUNK_SIZE);
+const batch=writeBatch(db);
+chunk.forEach(doc=>batch.delete(doc.ref));
+await batch.commit();
+btn.innerText=`تم حذف ${Math.min(i+CHUNK_SIZE,totalDocs)} من ${totalDocs}...`;
+}
+toast(`تم حذف ${totalDocs} سؤال بنجاح 🗑️`,"delete");
+loadStats();
+isCacheLoaded=false;
+}
+}catch(e){
+console.error(e);
+alert("خطأ أثناء الحذف: "+e.message);
+}finally{
+btn.innerText=originalText;
+btn.disabled=false;
+}
 };
-
-el('btn-nuke').onclick = async () => { 
-    if(prompt("تحذير: هذا سيحذف جميع الأسئلة! اكتب 'حذف الكل' للتأكيد:") === "حذف الكل") { 
-        const s = await getDocs(collection(db,"questions")); 
-        const b = writeBatch(db); 
-        let c = 0; 
-        s.forEach(d => { b.delete(d.ref); c++; }); 
-        if(c > 0) await b.commit(); 
-        alert(`تم حذف ${c} سؤال.`); 
-        loadStats(); 
-    } 
+el('btn-nuke').onclick=async()=>{
+const confirmMsg="تحذير: هذا سيحذف جميع الأسئلة في قاعدة البيانات نهائياً!\n\nللتأكيد، اكتب العبارة التالية بدقة:\nحذف الكل";
+const userInput=prompt(confirmMsg);
+if(userInput!=="حذف الكل"){
+if(userInput!==null)alert("العبارة غير صحيحة. تم إلغاء العملية.");
+return;
+}
+const btn=el('btn-nuke');
+if(!btn)return;
+const originalText=btn.innerText;
+btn.innerText="جاري التدمير...";
+btn.disabled=true;
+try{
+const snap=await getDocs(collection(db,"questions"));
+if(snap.empty){
+alert("قاعدة البيانات فارغة بالفعل.");
+}else{
+const totalDocs=snap.docs.length;
+const CHUNK_SIZE=400;
+let deletedCount=0;
+for(let i=0;i<totalDocs;i+=CHUNK_SIZE){
+const chunk=snap.docs.slice(i,i+CHUNK_SIZE);
+const batch=writeBatch(db);
+chunk.forEach(doc=>batch.delete(doc.ref));
+await batch.commit();
+deletedCount+=chunk.length;
+btn.innerText=`تم حذف ${deletedCount} من ${totalDocs}...`;
+}
+toast(`تم تصفير النظام وحذف ${totalDocs} سؤال.`,"delete");
+loadStats();
+isCacheLoaded=false;
+}
+}catch(e){
+console.error(e);
+alert("حدث خطأ أثناء الحذف: "+e.message);
+}finally{
+btn.innerText=originalText;
+btn.disabled=false;
+}
 };
 
 // ------------------------------------
@@ -1990,6 +2043,14 @@ el('file-import-others').onchange = () => {
 // =========================================================
 // 11. INITIALIZATION & GLOBAL HANDLERS
 // =========================================================
+
+function updateLocalCache(id, newData) {
+    if (!allQuestionsCache || allQuestionsCache.length === 0) return;    
+    const index = allQuestionsCache.findIndex(q => q.id === id);
+    if (index !== -1) {
+        allQuestionsCache[index] = { ...allQuestionsCache[index], ...newData };
+    }
+}
 
 function bindEventHandlers() {
     console.log("Starting App Initialization..."); // للتأكد من تشغيل الدالة

@@ -970,41 +970,43 @@ async function fetchAllForSearch() {
      }
 }
 
-el('qs-search-input').oninput = async function() {
-    const term = this.value.trim().toLowerCase();
-    const grid = el('questions-grid');
-    const loadBtn = el('btn-load-more');
-
-    if (term === "") {
-        loadQuestions(false);
-        return;
-    }
-
-    if (!isCacheLoaded) {
-         grid.innerHTML = '<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span></div>';
-         await fetchAllForSearch();
-    }
-
-    const results = allQuestionsCache.filter(q => {
-        const qText = (q.question || "").toLowerCase();
-        const expText = (q.explanation || "").toLowerCase();
-        const optText = (q.options || []).join(" ").toLowerCase();
-        return qText.includes(term) || expText.includes(term) || optText.includes(term) || q.id.toLowerCase().includes(term);
-    });
-
-    grid.innerHTML = '';
-    loadBtn.classList.add('hidden');
-    el('qs-counter').innerText = results.length;
-
-    if (results.length === 0) {
-        grid.innerHTML = '<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج مطابقة</div>';
-        return;
-    }
-
-    results.slice(0, 50).forEach(d => renderQuestionCard(d, grid));
-    if(results.length > 50) {
-         grid.innerHTML += `<div class="text-center text-xs text-slate-500 py-2">تم عرض 50 نتيجة من أصل ${results.length}</div>`;
-    }
+let searchTimeout;
+el('qs-search-input').oninput=function(){
+clearTimeout(searchTimeout);
+const self=this;
+const grid=el('questions-grid');
+const loadBtn=el('btn-load-more');
+if(grid&&self.value.trim()!==""){grid.style.opacity='0.5';}
+searchTimeout=setTimeout(async()=>{
+const term=self.value.trim().toLowerCase();
+if(term===""){
+grid.style.opacity='1';
+loadQuestions(false);
+return;
+}
+if(!isCacheLoaded){
+grid.innerHTML='<div id="q-loader" class="text-center py-12 text-slate-500"><span class="material-symbols-rounded spinner text-3xl">sync</span></div>';
+await fetchAllForSearch();
+}
+const results=allQuestionsCache.filter(q=>{
+const qText=(q.question||"").toLowerCase();
+const expText=(q.explanation||"").toLowerCase();
+const optText=(q.options||[]).join(" ").toLowerCase();
+return qText.includes(term)||expText.includes(term)||optText.includes(term)||q.id.toLowerCase().includes(term);
+});
+grid.innerHTML='';
+grid.style.opacity='1';
+loadBtn.classList.add('hidden');
+el('qs-counter').innerText=results.length;
+if(results.length===0){
+grid.innerHTML='<div class="text-center py-8 text-slate-500 bg-slate-800/20 rounded border border-slate-700/50">لا توجد نتائج مطابقة</div>';
+return;
+}
+results.slice(0,50).forEach(d=>renderQuestionCard(d,grid));
+if(results.length>50){
+grid.innerHTML+=`<div class="text-center text-xs text-slate-500 py-2 border-t border-slate-700/30 mt-2">تم عرض 50 نتيجة من أصل ${results.length}</div>`;
+}
+},500);
 };
 
 el('btn-load-more').onclick = () => loadQuestions(true);

@@ -1986,17 +1986,19 @@ el('file-import-others').onchange = () => {
 };
 
 // =========================================================
-// 11. INITIALIZATION
+// 11. INITIALIZATION & GLOBAL HANDLERS
 // =========================================================
 
 function bindEventHandlers() {
-    // تحميل إعدادات "ما الجديد"
+    console.log("Starting App Initialization..."); // للتأكد من تشغيل الدالة
+
+    // 1. تحميل إعدادات "ما الجديد"
     loadWhatsNewSettings();
     
-    // إعداد AI
+    // 2. إعداد AI
     setupAI();
     
-    // تهيئة القوائم المنسدلة
+    // 3. تهيئة القوائم المنسدلة (Drops)
     const checkBtn = () => {
         const expCat = el('export-cat');
         const btnExp = el('btn-export-filtered');
@@ -2007,10 +2009,20 @@ function bindEventHandlers() {
         if(btnDel) btnDel.disabled = !delTopic || !delTopic.value;
     };
     
+    // قوائم الإضافة والرفع
+    initDrops('upload-cat', 'upload-topic'); 
+    initDrops('man-cat', 'man-topic'); 
+    initDrops('paste-cat', 'paste-topic'); 
+    initDrops('edit-q-cat', 'edit-q-topic'); 
+
+    // قوائم التصدير والحذف
     initDrops('export-cat', 'export-topic', checkBtn);
     initDrops('delete-cat', 'delete-topic', checkBtn);
     
-    // تحميل الإحصائيات
+    // [مهم جداً] قوائم بنك الأسئلة
+    initDrops('manage-cat-filter', 'manage-topic-filter', () => loadQuestions(false));
+    
+    // 4. تحميل الإحصائيات
     loadStats();
 }
 
@@ -2018,15 +2030,18 @@ function bindEventHandlers() {
 signInAnonymously(auth)
     .then(() => { 
         isAuthReady = true; 
-        console.log("Admin Auth Ready"); 
+        console.log("✅ Admin Auth Ready"); 
         
-        // تهيئة جميع المعالجات بعد تحميل DOM
-        document.addEventListener('DOMContentLoaded', () => {
+        // [تصحيح] التحقق مما إذا كانت الصفحة محملة بالفعل أم لا
+        if (document.readyState === "loading") {
+            // إذا كانت الصفحة لا تزال تحمل، ننتظر
+            document.addEventListener('DOMContentLoaded', bindEventHandlers);
+        } else {
+            // إذا انتهى التحميل، نشغل الدالة فوراً
             bindEventHandlers();
-        });
+        }
         
-        // تحميل الصفحة الافتراضية مباشرة
-        loadStats();
+        // تحميل الصفحة الافتراضية
         triggerTab('view-dashboard');
     })
     .catch(e => {
@@ -2038,7 +2053,6 @@ signInAnonymously(auth)
 // 12. GLOBAL HELPER FUNCTIONS
 // =========================================================
 
-// دالة مساعدة لإغلاق النماذج
 window.closeModal = (modalId) => {
     const modal = document.getElementById(modalId);
     if (modal) {

@@ -1144,3 +1144,12 @@ input:checked + .toggle-slider:before {
         color: black;
     }
 }
+
+/* ===== Messages (Mobile navigation) ===== */
+@media (max-width: 767px) {
+  #admin-chat-pane { display: none; }
+  #admin-messages-layout.admin-chat-open #admin-conv-pane { display: none; }
+  #admin-messages-layout.admin-chat-open #admin-chat-pane { display: flex; }
+  #admin-messages-layout.admin-chat-open #admin-chat-panel { display: flex !important; }
+  #admin-messages-layout.admin-chat-open #admin-chat-empty { display: none !important; }
+}

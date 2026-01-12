@@ -26,6 +26,7 @@ import {
 
 // استيراد البيانات الثابتة من ملف data.js
 import { topics, badgesMap, badgesData, NOOR_JSON_FILES, NOOR_GITHUB_BASE } from './data.js';
+import { initAdminMessaging } from './messaging.js';
 
 // تعريف كائن Timestamp ليكون متاحاً عالمياً
 window.Timestamp = Timestamp; 
@@ -188,7 +189,8 @@ window.triggerTab = (tabId) => {
     if(tabId === 'view-dashboard') loadStats();
     if(tabId === 'view-ai-settings') loadAISettings();
     
-    window.toggleAdminMenu(false);
+        if(tabId === 'view-messages') window.adminMessagingOpen?.();
+window.toggleAdminMenu(false);
     el('main-view-area')?.scrollTo(0, 0);
 };
 
@@ -2591,6 +2593,11 @@ function updateLocalCache(id, newData) {
 }
 
 function bindEventHandlers() {
+    // تهيئة نظام الرسائل (منفصل) + فقاعة إشعار
+    if (!window.__adminMessagingInited) {
+        window.__adminMessagingInited = true;
+        try { initAdminMessaging({ db, el, show, hide }); } catch(e) { console.warn('Messaging init failed', e); }
+    }
     console.log("Starting App Initialization..."); // للتأكد من تشغيل الدالة
 
     // 1. تحميل إعدادات "ما الجديد"

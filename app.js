@@ -27,6 +27,7 @@ import {
 // استيراد البيانات الثابتة من ملف data.js
 import { topics, badgesMap, badgesData, NOOR_JSON_FILES, NOOR_GITHUB_BASE } from './data.js';
 import { initAdminMessaging } from './messaging.js';
+import { initStorageAudit } from './storage_audit.js';
 
 // تعريف كائن Timestamp ليكون متاحاً عالمياً
 window.Timestamp = Timestamp; 
@@ -190,8 +191,28 @@ window.triggerTab = (tabId) => {
     if(tabId === 'view-ai-settings') loadAISettings();
     
         if(tabId === 'view-messages') window.adminMessagingOpen?.();
+    if(tabId === 'view-storage-audit') window.storageAuditOpen?.();
 window.toggleAdminMenu(false);
     el('main-view-area')?.scrollTo(0, 0);
+};
+
+
+// ✅ فتح صفحة تحرير المستخدم من أي قسم (مثل كشف حساب التخزين)
+window.openUserEdit = async (userId) => {
+    try {
+        if (!userId) return;
+        const snap = await getDoc(doc(db, 'users', userId));
+        if (!snap.exists()) {
+            toast('المستخدم غير موجود', 'error');
+            return;
+        }
+        const u = snap.data() || {};
+        const stats = u.stats || {};
+        openEditUserModal(userId, u, stats);
+    } catch (e) {
+        console.error(e);
+        toast('تعذر فتح ملف المستخدم', 'error');
+    }
 };
 
 // ربط أحداث التنقل
@@ -2597,6 +2618,7 @@ function bindEventHandlers() {
     if (!window.__adminMessagingInited) {
         window.__adminMessagingInited = true;
         try { initAdminMessaging({ db, el, show, hide }); } catch(e) { console.warn('Messaging init failed', e); }
+        try { initStorageAudit({ db, el, toast }); } catch(e) { console.warn('Storage audit init failed', e); }
     }
     console.log("Starting App Initialization..."); // للتأكد من تشغيل الدالة
 

@@ -65,6 +65,10 @@
                     <span class="material-symbols-rounded text-xl">manage_accounts</span>
                     <span>المستخدمين</span>
                 </div>
+                <div class="nav-item" data-tab="view-storage-audit">
+                    <span class="material-symbols-rounded text-xl text-cyan-300">storage</span>
+                    <span>كشف حساب التخزين</span>
+                </div>
                 <div class="nav-item" data-tab="view-content">
                     <span class="material-symbols-rounded text-xl">post_add</span>
                     <span>إضافة محتوى</span>
@@ -697,6 +701,151 @@
                     </div>
                 </div>
 
+
+
+                <!-- Storage Audit View -->
+                <div id="view-storage-audit" class="view-section hidden space-y-4 fade-in">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-cyan-900/10 border border-cyan-700/20 rounded-2xl p-4">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-rounded text-2xl text-cyan-300 bg-cyan-400/10 p-2 rounded-xl">storage</span>
+                            <div>
+                                <div class="font-['Reem_Kufi'] text-xl text-white">كشف حساب التخزين</div>
+                                <div class="text-xs text-slate-400">قياس حجم مستند المستخدم (تقريبي) + تفصيل الحقول + أدوات تنظيف</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="audit-refresh-users" class="w-10 h-10 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:bg-slate-800 transition flex items-center justify-center" title="تحديث قائمة المستخدمين">
+                                <span class="material-symbols-rounded text-sm">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-3">
+                        <!-- Users List -->
+                        <div class="w-full lg:w-96 shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-2xl overflow-hidden flex flex-col">
+                            <div class="p-3 border-b border-slate-700/50 bg-slate-900/40">
+                                <div class="flex items-center justify-between">
+                                    <div class="font-bold">المستخدمون</div>
+                                    <div class="text-[10px] text-slate-500" id="audit-users-count">—</div>
+                                </div>
+                                <div class="mt-2 relative">
+                                    <span class="material-symbols-rounded absolute right-3 top-2.5 text-slate-500 pointer-events-none">search</span>
+                                    <input id="audit-user-search" class="w-full pr-10 pl-3 py-2 rounded-xl bg-slate-900/60 border border-slate-700/60 text-sm outline-none focus:border-cyan-500/50" placeholder="ابحث بالاسم أو بالـ ID..." />
+                                </div>
+                            </div>
+                            <div id="audit-user-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+                        </div>
+
+                        <!-- Details -->
+                        <div class="flex-1 bg-slate-900/30 border border-slate-700/50 rounded-2xl overflow-hidden flex flex-col min-w-0">
+                            <div id="audit-empty" class="flex-1 flex items-center justify-center text-slate-400 text-sm p-6">
+                                اختر مستخدمًا لعرض تفاصيل التخزين.
+                            </div>
+
+                            <div id="audit-panel" class="hidden flex-1 flex flex-col overflow-hidden">
+                                <div class="shrink-0 p-3 border-b border-slate-700/50 bg-slate-900/40 flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div id="audit-title" class="font-bold text-sm truncate">—</div>
+                                        <div id="audit-subtitle" class="text-[10px] text-slate-400 truncate">—</div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button id="audit-reload-user" class="w-10 h-10 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:bg-slate-800 transition flex items-center justify-center" title="تحديث بيانات المستخدم">
+                                            <span class="material-symbols-rounded text-sm">sync</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+                                    <!-- Summary -->
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                            <div class="text-[10px] text-slate-400">حجم مستند المستخدم (تقريبي)</div>
+                                            <div class="mt-1 text-xl font-bold font-mono" id="audit-doc-size">—</div>
+                                            <div class="mt-2 w-full bg-slate-800/60 rounded-full h-2 overflow-hidden">
+                                                <div id="audit-doc-bar" class="h-2 bg-cyan-400/70" style="width:0%"></div>
+                                            </div>
+                                            <div class="mt-1 text-[10px] text-slate-500" id="audit-doc-meta">—</div>
+                                        </div>
+                                        <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                            <div class="text-[10px] text-slate-400">أكبر حقل</div>
+                                            <div class="mt-1 text-sm font-bold truncate" id="audit-largest-field">—</div>
+                                            <div class="mt-1 text-[10px] text-slate-500" id="audit-largest-bytes">—</div>
+                                            <div class="mt-2 text-[10px] text-slate-500">انقر على الحقل لعرض التفصيل والتنظيف.</div>
+                                        </div>
+                                        <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                            <div class="text-[10px] text-slate-400">إجمالي مرتبط بالمستخدم (تقريبي)</div>
+                                            <div class="mt-1 text-xl font-bold font-mono" id="audit-related-size">—</div>
+                                            <div class="mt-1 text-[10px] text-slate-500" id="audit-related-meta">—</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Fields Table -->
+                                    <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="font-bold">تفصيل حجم الحقول (Top-level)</div>
+                                            <div class="text-[10px] text-slate-500">حساب تقريبي بترميز UTF-8</div>
+                                        </div>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-sm">
+                                                <thead>
+                                                    <tr class="text-slate-400 text-[11px]">
+                                                        <th class="text-right py-2">الحقل</th>
+                                                        <th class="text-right py-2">النوع</th>
+                                                        <th class="text-right py-2">الحجم</th>
+                                                        <th class="text-right py-2">%</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="audit-fields-body"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Nested Detail -->
+                                    <div id="audit-nested" class="hidden glass p-4 rounded-2xl border border-slate-700/40">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="font-bold" id="audit-nested-title">تفصيل</div>
+                                            <div class="flex items-center gap-2">
+                                                <button id="audit-delete-field" class="px-3 py-1.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs hover:bg-red-500/25 transition">حذف الحقل</button>
+                                                <button id="audit-clear-field" class="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs hover:bg-amber-500/25 transition">تفريغ</button>
+                                            </div>
+                                        </div>
+                                        <div id="audit-nested-body" class="space-y-2"></div>
+                                    </div>
+
+                                    <!-- JSON Editor -->
+                                    <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                                            <div class="font-bold">مستند المستخدم (JSON)</div>
+                                            <div class="flex items-center gap-2">
+                                                <label class="text-xs text-slate-300 flex items-center gap-2">
+                                                    <input id="audit-json-edit-toggle" type="checkbox" class="accent-cyan-400" />
+                                                    تفعيل التحرير
+                                                </label>
+                                                <button id="audit-save-merge" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-200 text-xs hover:bg-cyan-500/25 transition">حفظ (دمج)</button>
+                                                <button id="audit-save-replace" class="px-3 py-1.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-xs hover:bg-indigo-500/25 transition">حفظ (استبدال)</button>
+                                            </div>
+                                        </div>
+                                        <textarea id="audit-json" class="input-box h-52 resize-none bg-slate-900/60 rounded-xl font-mono text-xs" spellcheck="false" readonly></textarea>
+                                        <div class="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                            <div class="text-[10px] text-slate-500">الحفظ بالاستبدال يبدّل المستند بالكامل. استخدمه بحذر.</div>
+                                            <button id="audit-delete-user" class="px-3 py-2 rounded-xl bg-red-600/20 border border-red-500/40 text-red-200 text-xs hover:bg-red-600/30 transition">حذف المستخدم بالكامل (مع المحادثة)</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Related Cleanup -->
+                                    <div class="glass p-4 rounded-2xl border border-slate-700/40">
+                                        <div class="font-bold mb-2">تنظيف بيانات مرتبطة</div>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                            <button id="audit-delete-messages" class="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:bg-slate-800 transition text-xs">حذف كل رسائل المحادثة</button>
+                                            <button id="audit-delete-reports" class="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:bg-slate-800 transition text-xs">حذف بلاغات المستخدم</button>
+                                            <button id="audit-open-user-edit" class="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/60 hover:bg-slate-800 transition text-xs">فتح صفحة تحرير المستخدم</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 <!-- System Settings View -->
                 <div id="view-system" class="view-section hidden space-y-4 fade-in">
                     <div class="glass p-6 mb-6 border-r-4 border-r-amber-500 bg-amber-900/10 rounded-xl">

@@ -2,7 +2,7 @@
 // 1. IMPORTS & CONFIGURATION
 // =========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import { 
     getFirestore, 
     collection, 
@@ -28,6 +28,7 @@ import {
 import { topics, badgesMap, badgesData, NOOR_JSON_FILES, NOOR_GITHUB_BASE } from './data.js';
 import { initAdminMessaging } from './messaging.js';
 import { initStorageAudit } from './storage_audit.js';
+import { initAdminAuthGate } from './auth_gate.js';
 
 // تعريف كائن Timestamp ليكون متاحاً عالمياً
 window.Timestamp = Timestamp; 
@@ -2656,12 +2657,14 @@ function bindEventHandlers() {
     loadStats();
 }
 
-// تسجيل الدخول المجهول وتهيئة التطبيق
-signInAnonymously(auth)
-    .then(() => { 
-        isAuthReady = true; 
-        console.log("✅ Admin Auth Ready"); 
-        
+// تسجيل الدخول عبر Google (مع إقفال كامل للتطبيق قبل المصادقة)
+const ALLOWED_ADMIN_EMAILS = ["iq.sd.2020@gmail.com"]; // ✅ عدّل/أضف الإيميلات المسموحة إذا لزم
+
+initAdminAuthGate({ auth, allowedEmails: ALLOWED_ADMIN_EMAILS })
+    .then(() => {
+        isAuthReady = true;
+        console.log("✅ Admin Auth Ready");
+
         // [تصحيح] التحقق مما إذا كانت الصفحة محملة بالفعل أم لا
         if (document.readyState === "loading") {
             // إذا كانت الصفحة لا تزال تحمل، ننتظر
@@ -2670,15 +2673,14 @@ signInAnonymously(auth)
             // إذا انتهى التحميل، نشغل الدالة فوراً
             bindEventHandlers();
         }
-        
+
         // تحميل الصفحة الافتراضية
         triggerTab('view-dashboard');
     })
     .catch(e => {
         console.error("Firebase Auth Error:", e);
-        toast("خطأ في المصادقة مع Firebase", "error");
+        toast("خطأ في تسجيل الدخول عبر Google", "error");
     });
-
 // =========================================================
 // 12. GLOBAL HELPER FUNCTIONS
 // =========================================================

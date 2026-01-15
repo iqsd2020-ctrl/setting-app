@@ -30,7 +30,31 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="bg-[#0f172a] text-[#f1f5f9] font-['Amiri'] h-[100dvh] overflow-hidden flex flex-col items-center justify-center selection:bg-amber-500 selection:text-white">
+<body data-auth="pending" class="bg-[#0f172a] text-[#f1f5f9] font-['Amiri'] h-[100dvh] overflow-hidden flex flex-col items-center justify-center selection:bg-amber-500 selection:text-white">
+
+
+    <!-- Auth Gate Overlay -->
+    <div id="auth-overlay" class="auth-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="glass w-full max-w-md p-6 border border-amber-500/30 rounded-2xl">
+            <div class="text-center space-y-2">
+                <div class="text-amber-500 font-bold text-2xl font-[Reem_Kufi] drop-shadow">تسجيل الدخول</div>
+                <div class="text-sm text-slate-300 leading-relaxed">
+                    هذه لوحة إدارية مقفلة. يرجى تسجيل الدخول عبر Google للمتابعة.
+                </div>
+            </div>
+
+            <div id="auth-error" class="hidden mt-4 bg-red-900/30 border border-red-500/30 text-red-200 text-sm p-3 rounded-lg"></div>
+
+            <button id="btn-google-login" class="btn-gold w-full mt-6">
+                <span class="material-symbols-rounded">login</span>
+                <span>تسجيل الدخول عبر Google</span>
+            </button>
+
+            <div id="auth-hint" class="mt-3 text-xs text-slate-500 text-center">
+                سيتم السماح للحساب المصرّح فقط.
+            </div>
+        </div>
+    </div>
 
     <!-- Mobile Menu Overlay -->
     <div id="side-menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm"></div>
@@ -88,7 +112,7 @@
             </nav>
 
             <div class="p-4 border-t border-slate-700 bg-slate-900/30">
-                <button onclick="location.reload()" class="w-full flex items-center justify-center gap-3 text-red-400 hover:text-red-200 hover:bg-red-500/10 p-3 rounded-lg transition text-sm font-bold border border-transparent hover:border-red-500/30">
+                <button onclick="window.adminLogout ? window.adminLogout() : location.reload()" class="w-full flex items-center justify-center gap-3 text-red-400 hover:text-red-200 hover:bg-red-500/10 p-3 rounded-lg transition text-sm font-bold border border-transparent hover:border-red-500/30">
                     <span class="material-symbols-rounded">power_settings_new</span>
                     <span>خروج</span>
                 </button>

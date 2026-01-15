@@ -1153,3 +1153,33 @@ input:checked + .toggle-slider:before {
   #admin-messages-layout.admin-chat-open #admin-chat-panel { display: flex !important; }
   #admin-messages-layout.admin-chat-open #admin-chat-empty { display: none !important; }
 }
+
+
+/* =========================================
+   99. Auth Gate (Google Login)
+   ========================================= */
+
+#auth-overlay {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* إقفال التطبيق بالكامل قبل تسجيل الدخول */
+body[data-auth="pending"] #dashboard-container {
+    display: none !important;
+}
+body[data-auth="pending"] #side-menu-overlay {
+    display: none !important;
+}
+
+body[data-auth="ready"] #auth-overlay {
+    display: none !important;
+}
+
+/* مؤشر تحميل خفيف لزر الدخول */
+#btn-google-login.loading {
+    opacity: 0.85;
+    pointer-events: none;
+}
+
